@@ -22,10 +22,12 @@
 <main>
   <section id="view-home" class="view active">
     <div class="card next-class" id="nextClass"></div>
-    <h2>最近的作業截止</h2>
+    <div class="card" id="brief"></div>
+    <h2>優先處理的作業</h2>
     <ul class="list" id="homeDeadlines"></ul>
     <h2>最新公告</h2>
     <ul class="list" id="homeNotices"></ul>
+    <div class="card" id="stats"></div>
   </section>
 
   <section id="view-schedule" class="view">
@@ -35,6 +37,10 @@
 
   <section id="view-tasks" class="view">
     <h2>作業</h2>
+    <div class="seg" id="sortSeg">
+      <button data-sort="prio">依優先度</button>
+      <button data-sort="time">依截止時間</button>
+    </div>
     <ul class="list" id="tasks"></ul>
   </section>
 
@@ -59,10 +65,29 @@
         <input type="number" id="classLead" min="5" max="120" value="30">
       </label>
     </div>
+    <h2>每日總覽</h2>
+    <div class="card">
+      <label class="row"><span>每天早上推送今日課程與截止作業</span><input type="checkbox" id="briefOn" checked></label>
+      <label class="row">推送時間
+        <input type="time" id="briefTime" value="07:30">
+      </label>
+      <button id="btnBrief" class="btn secondary">傳送今日總覽範例</button>
+    </div>
+    <h2>學期</h2>
+    <div class="card">
+      <label class="row">顯示學期
+        <select id="semesterSel"></select>
+      </label>
+      <p class="muted">預設自動使用目前學期，舊學期的課表、作業與公告不會顯示，也不會發提醒。</p>
+    </div>
     <h2>資料來源</h2>
     <div class="card">
       <p class="muted">目前使用示範資料。串接後端後，會由後端定時從課輔系統取得最新資料。</p>
       <p class="muted" id="dataSource"></p>
+    </div>
+    <div class="card">
+      <p class="muted">完成、進度、重要標記與備註只存在這支手機上。</p>
+      <button id="btnReset" class="btn secondary">重設本機資料</button>
     </div>
     <div class="card hint" id="iosHint" hidden>
       iPhone 提示：請先點 Safari 的「分享」→「加入主畫面」，從主畫面圖示開啟後才能收到通知（需要 iOS 16.4 以上）。
