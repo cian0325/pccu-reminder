@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>課輔提醒</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="課輔提醒">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>課輔提醒</h1>
+  <span id="clock" aria-live="off"></span>
+</header>
+
+<main>
+  <section id="view-home" class="view active">
+    <div class="card next-class" id="nextClass"></div>
+    <h2>最近的作業截止</h2>
+    <ul class="list" id="homeDeadlines"></ul>
+    <h2>最新公告</h2>
+    <ul class="list" id="homeNotices"></ul>
+  </section>
+
+  <section id="view-schedule" class="view">
+    <h2>本週課表</h2>
+    <div id="schedule"></div>
+  </section>
+
+  <section id="view-tasks" class="view">
+    <h2>作業</h2>
+    <ul class="list" id="tasks"></ul>
+  </section>
+
+  <section id="view-notices" class="view">
+    <h2>公告</h2>
+    <ul class="list" id="notices"></ul>
+  </section>
+
+  <section id="view-settings" class="view">
+    <h2>通知設定</h2>
+    <div class="card">
+      <p id="notifStatus" class="muted"></p>
+      <button id="btnNotif" class="btn">開啟通知</button>
+      <button id="btnTest" class="btn secondary">傳送測試通知</button>
+    </div>
+    <h2>作業提前提醒</h2>
+    <div class="card">
+      <label class="row"><input type="checkbox" data-lead="1440" checked> 截止前 1 天</label>
+      <label class="row"><input type="checkbox" data-lead="180" checked> 截止前 3 小時</label>
+      <label class="row"><input type="checkbox" data-lead="60"> 截止前 1 小時</label>
+      <label class="row">上課前提醒（分鐘）
+        <input type="number" id="classLead" min="5" max="120" value="30">
+      </label>
+    </div>
+    <h2>資料來源</h2>
+    <div class="card">
+      <p class="muted">目前使用示範資料。串接後端後，會由後端定時從課輔系統取得最新資料。</p>
+      <p class="muted" id="dataSource"></p>
+    </div>
+    <div class="card hint" id="iosHint" hidden>
+      iPhone 提示：請先點 Safari 的「分享」→「加入主畫面」，從主畫面圖示開啟後才能收到通知（需要 iOS 16.4 以上）。
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-view="home" class="active"><span>🏠</span>首頁</button>
+  <button data-view="schedule"><span>📅</span>課表</button>
+  <button data-view="tasks"><span>📝</span>作業</button>
+  <button data-view="notices"><span>📢</span>公告</button>
+  <button data-view="settings"><span>⚙️</span>設定</button>
+</nav>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
