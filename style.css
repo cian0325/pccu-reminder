@@ -78,3 +78,10 @@ nav button.active{color:var(--accent)}
 .stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
 .stat-row:last-child{border-bottom:none}
 .row input[type=time]{padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+
+.form{display:flex;flex-direction:column;gap:10px}
+.form input,.form select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px}
+.form .two{display:flex;gap:10px}
+.form .btn{margin:0}
+#demoBanner .btn.small{margin-top:8px}
+.form textarea{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px;font-family:ui-monospace,monospace}

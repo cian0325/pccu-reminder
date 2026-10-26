@@ -21,6 +21,10 @@
 
 <main>
   <section id="view-home" class="view active">
+    <div class="card hint" id="demoBanner" hidden>
+      <b>目前顯示的是示範資料</b>：課程、教室與作業都是虛構的，不是你的真實資料。
+      <div><button class="btn small" id="btnBannerMine">改用我自己的資料</button></div>
+    </div>
     <div class="card next-class" id="nextClass"></div>
     <div class="card" id="brief"></div>
     <h2>優先處理的作業</h2>
@@ -42,6 +46,45 @@
       <button data-sort="time">依截止時間</button>
     </div>
     <ul class="list" id="tasks"></ul>
+  </section>
+
+  <section id="view-mine" class="view">
+    <h2>我的資料</h2>
+    <p class="muted">在後端串接課輔系統之前，先自己輸入真實的課程與作業。資料只存在這支手機，不會上傳。新增的項目會自動歸入目前學期。</p>
+    <div class="card">
+      <label class="row"><span>顯示哪一份資料</span>
+        <select id="modeSel"><option value="mine">我的資料</option><option value="demo">示範資料（虛構）</option></select>
+      </label>
+    </div>
+    <h2>匯入資料</h2>
+    <div class="card form">
+      <p class="muted">匯入由 pccu_parser 產生的 JSON。會取代同學期的課表與公告；作業只新增、不覆蓋。</p>
+      <input type="file" id="importFile" accept=".json,application/json">
+      <textarea id="importText" rows="4" placeholder="或把 JSON 貼在這裡"></textarea>
+      <button class="btn" id="btnImport" type="button">匯入</button>
+    </div>
+    <h2>新增課程</h2>
+    <form class="card form" id="formCourse">
+      <input name="course" placeholder="課程名稱" required>
+      <select name="weekday">
+        <option value="1">週一</option><option value="2">週二</option><option value="3">週三</option>
+        <option value="4">週四</option><option value="5">週五</option><option value="6">週六</option>
+      </select>
+      <div class="two"><input name="start" type="time" required aria-label="上課時間"><input name="end" type="time" required aria-label="下課時間"></div>
+      <input name="room" placeholder="教室（例如：大典館 B101）" required>
+      <input name="teacher" placeholder="老師（選填）">
+      <button class="btn" type="submit">新增課程</button>
+    </form>
+    <h2>新增作業</h2>
+    <form class="card form" id="formTask">
+      <input name="course" placeholder="課程名稱" list="courseList" required>
+      <datalist id="courseList"></datalist>
+      <input name="title" placeholder="作業名稱" required>
+      <input name="due" type="datetime-local" required aria-label="截止時間">
+      <button class="btn" type="submit">新增作業</button>
+    </form>
+    <h2>已輸入的資料</h2>
+    <ul class="list" id="mineList"></ul>
   </section>
 
   <section id="view-notices" class="view">
@@ -82,8 +125,9 @@
     </div>
     <h2>資料來源</h2>
     <div class="card">
-      <p class="muted">目前使用示範資料。串接後端後，會由後端定時從課輔系統取得最新資料。</p>
       <p class="muted" id="dataSource"></p>
+      <p class="muted">尚未串接課輔系統。串接後端後，會由後端定時取得最新資料；在那之前可以手動輸入。</p>
+      <button class="btn secondary" id="btnMine">管理我的課程與作業</button>
     </div>
     <div class="card">
       <p class="muted">完成、進度、重要標記與備註只存在這支手機上。</p>

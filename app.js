@@ -68,8 +68,27 @@ function mergeLocal(data) {
   };
 }
 
-// ---------- 資料 ----------
-// 之後換成 fetch("/api/summary")；失敗時退回示範資料
+// ---------- 資料來源 ----------
+// 優先順序：後端 API（第二階段）> 我手動輸入的資料 > 示範資料（虛構）
+const MINE_KEY = "pccu-reminder-mine";
+const MODE_KEY = "pccu-reminder-mode";
+
+function loadMine() {
+  try {
+    const m = JSON.parse(localStorage.getItem(MINE_KEY));
+    if (m) return { schedule: m.schedule || [], tasks: m.tasks || [], notices: m.notices || [] };
+  } catch { /* ignore */ }
+  return { schedule: [], tasks: [], notices: [] };
+}
+function saveMine(m) { try { localStorage.setItem(MINE_KEY, JSON.stringify(m)); } catch { /* ignore */ } }
+function hasMine() { const m = loadMine(); return m.schedule.length + m.tasks.length + m.notices.length > 0; }
+function getMode() {
+  try { const v = localStorage.getItem(MODE_KEY); if (v === "mine" || v === "demo") return v; } catch { /* ignore */ }
+  return hasMine() ? "mine" : "demo";
+}
+function setMode(v) { try { localStorage.setItem(MODE_KEY, v); } catch { /* ignore */ } }
+const uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
 async function loadData() {
   try {
     if (window.API_BASE) {
@@ -77,7 +96,16 @@ async function loadData() {
       if (r.ok) return await r.json();
     }
   } catch (e) { /* fall through */ }
+  if (getMode() === "mine") return { ...loadMine(), source: "manual" };
   return window.DEMO_DATA;
+}
+
+async function reloadData() {
+  RAW = await loadData();
+  applySettings();
+  rebuild();
+  render();
+  renderMine();
 }
 
 let RAW = null;
@@ -165,14 +193,14 @@ function buildBrief(now) {
   const unread = DATA.notices.filter((n) => !n.read).length;
 
   const lines = [];
-  if (todays.length) lines.push(`🎓 今天 ${todays.length} 堂課：` + todays.map((s) => `${s.start} ${s.course}（${s.room}）`).join("、"));
+  if (todays.length) lines.push(`🎓 今天 ${todays.length} 堂課：` + todays.map((s) => `${s.start} ${s.course}（${roomText(s.room)}）`).join("、"));
   else lines.push("🎓 今天沒有課");
   if (dueSoon.length) lines.push(`⏰ 24 小時內截止 ${dueSoon.length} 份：` + dueSoon.map((t) => t.title).join("、"));
   else lines.push("⏰ 24 小時內沒有作業截止");
   if (overdue.length) lines.push(`⚠️ 已逾期未完成 ${overdue.length} 份`);
   if (unread) lines.push(`📢 未讀公告 ${unread} 則`);
 
-  let body = todays.length ? `今天 ${todays.length} 堂課，第一堂 ${todays[0].start} ${todays[0].course}（${todays[0].room}）。` : "今天沒有課。";
+  let body = todays.length ? `今天 ${todays.length} 堂課，第一堂 ${todays[0].start} ${todays[0].course}（${roomText(todays[0].room)}）。` : "今天沒有課。";
   body += dueSoon.length ? `24 小時內有 ${dueSoon.length} 份作業截止。` : "24 小時內沒有作業截止。";
   if (unread) body += `未讀公告 ${unread} 則。`;
   return { title: `今日總覽 ${fmtDate(now).split("）")[0]}）`, body, lines };
@@ -242,6 +270,9 @@ function noticeItem(n) {
     <div class="sub">${esc(n.course)}・${fmtDate(n.posted)}</div></li>`;
 }
 
+// 有些課（例如體育）頁面上沒有教室
+const roomText = (r) => r || "教室未標示";
+
 function mapUrl(room) {
   const building = String(room).split(/\s+/)[0];
   return "https://maps.apple.com/?q=" + encodeURIComponent("中國文化大學 " + building);
@@ -254,19 +285,21 @@ function renderNextClass(now) {
   const ongoing = c.startAt <= now;
   el.innerHTML = `<div class="label">${ongoing ? "正在上課" : "下一堂課"}</div>
     <div class="name">${esc(c.course)}</div>
-    <div class="meta">📍 ${esc(c.room)}　🕘 ${fmtDate(c.startAt)} – ${c.end}</div>
+    <div class="meta">📍 ${esc(roomText(c.room))}　🕘 ${fmtDate(c.startAt)} – ${c.end}</div>
     <div class="meta">${ongoing ? "進行中" : relTime(c.startAt - now) + "開始"}・${esc(c.teacher || "")}</div>
-    <a class="btn secondary small" id="navLink" href="${mapUrl(c.room)}" target="_blank" rel="noopener">🧭 導航到教室</a>`;
+    ${c.room ? `<a class="btn secondary small" id="navLink" href="${mapUrl(c.room)}" target="_blank" rel="noopener">🧭 導航到教室</a>` : ""}`;
 }
 
 function renderSchedule(now) {
   const today = new Date(now).getDay();
   const days = [1, 2, 3, 4, 5];
+  if (DATA.schedule.some((s) => s.weekday === 6)) days.push(6);
+  if (DATA.schedule.some((s) => s.weekday === 0)) days.push(0);
   $("#schedule").innerHTML = days.map((wd) => {
     const slots = DATA.schedule.filter((s) => s.weekday === wd).sort((a, b) => a.start.localeCompare(b.start));
     const body = slots.length
       ? slots.map((s) => `<div class="slot"><div class="time">${s.start}–${s.end}</div>
-          <div><div>${esc(s.course)}</div><div class="room">${esc(s.room)}</div></div></div>`).join("")
+          <div><div>${esc(s.course)}</div><div class="room">${esc(roomText(s.room))}</div></div></div>`).join("")
       : '<div class="muted">沒有課</div>';
     return `<div class="day ${wd === today ? "today" : ""}"><h3>${WEEKDAY_NAMES[wd]}${wd === today ? "（今天）" : ""}</h3>${body}</div>`;
   }).join("");
@@ -305,18 +338,21 @@ function render() {
   renderNextClass(now);
   renderBrief(now);
   $("#homeDeadlines").innerHTML = home.slice(0, 3).map((t) => taskItem(t, now, false)).join("") || '<li class="muted">沒有待繳作業 🎉</li>';
-  $("#homeNotices").innerHTML = notices.slice(0, 3).map(noticeItem).join("");
+  $("#homeNotices").innerHTML = notices.slice(0, 3).map(noticeItem).join("") || '<li class="muted">沒有公告</li>';
+  $("#demoBanner").hidden = DATA.source !== "demo";
   renderStats(now);
   renderSchedule(now);
   $("#tasks").innerHTML = sortedTasks(now, state.sort).map((t) => taskItem(t, now, true)).join("") || '<li class="muted">這個學期沒有作業</li>';
   document.querySelectorAll("#sortSeg button").forEach((b) => b.classList.toggle("on", b.dataset.sort === state.sort));
   $("#notices").innerHTML = notices.map(noticeItem).join("");
-  $("#dataSource").textContent = "目前資料來源：" + (DATA.source === "demo" ? "示範資料" : "課輔系統（後端同步）");
+  const srcName = { demo: "示範資料（虛構，非真實課程）", manual: "我手動輸入的資料" }[DATA.source] || "課輔系統（後端同步）";
+  $("#dataSource").textContent = "目前資料來源：" + srcName;
   $("#clock").textContent = activeSemester() + "・" + new Date(now).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
 }
 
 // ---------- 導覽 ----------
 function switchView(name) {
+  if (name === "mine") renderMine();
   document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("active", x.dataset.view === name));
   document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === "view-" + name));
   window.scrollTo(0, 0);
@@ -327,6 +363,17 @@ document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click
 document.addEventListener("click", (e) => {
   const sortBtn = e.target.closest("#sortSeg button");
   if (sortBtn) { state.sort = sortBtn.dataset.sort; saveState(); render(); return; }
+
+  const del = e.target.closest("[data-delbtn]");
+  if (del) {
+    const li = del.closest("[data-del]");
+    const [type, id] = li.dataset.del.split(":");
+    const m = loadMine();
+    m[type] = m[type].filter((x) => x.id !== id);
+    saveMine(m);
+    reloadData();
+    return;
+  }
 
   const b = e.target.closest("[data-act]");
   if (!b) return;
@@ -367,6 +414,121 @@ document.addEventListener("click", (e) => {
   rebuild();
   render();
 });
+
+// ---------- 手動輸入我的資料 ----------
+function renderMine() {
+  const m = loadMine();
+  $("#modeSel").value = getMode();
+  $("#courseList").innerHTML = [...new Set(m.schedule.map((s) => s.course))].map((c) => `<option value="${esc(c)}">`).join("");
+  const rows = [
+    ...m.schedule.map((s) => `<li data-del="schedule:${esc(s.id)}"><div class="title">🎓 ${esc(s.course)}</div>
+      <div class="sub">${esc(s.semester)}・${WEEKDAY_NAMES[s.weekday]} ${esc(s.start)}–${esc(s.end)}・${esc(s.room)}</div>
+      <div class="actions"><button data-delbtn>刪除</button></div></li>`),
+    ...m.tasks.map((t) => `<li data-del="tasks:${esc(t.id)}"><div class="title">📝 ${esc(t.title)}</div>
+      <div class="sub">${esc(t.semester)}・${esc(t.course)}・截止 ${fmtDate(t.due)}</div>
+      <div class="actions"><button data-delbtn>刪除</button></div></li>`)
+  ];
+  $("#mineList").innerHTML = rows.join("") || '<li class="muted">還沒有資料。先新增課程與作業吧。</li>';
+}
+
+$("#formCourse").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  const f = ev.target.elements;
+  if (f.end.value <= f.start.value) return alert("下課時間必須晚於上課時間");
+  const m = loadMine();
+  m.schedule.push({
+    id: uid(), semester: activeSemester(), weekday: Number(f.weekday.value),
+    start: f.start.value, end: f.end.value,
+    course: f.course.value.trim(), room: f.room.value.trim(), teacher: f.teacher.value.trim()
+  });
+  saveMine(m);
+  setMode("mine");
+  ev.target.reset();
+  reloadData();
+});
+
+$("#formTask").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  const f = ev.target.elements;
+  const due = new Date(f.due.value).getTime();
+  if (Number.isNaN(due)) return alert("請選擇截止時間");
+  const m = loadMine();
+  m.tasks.push({ id: uid(), semester: activeSemester(), course: f.course.value.trim(), title: f.title.value.trim(), due, done: false });
+  saveMine(m);
+  setMode("mine");
+  ev.target.reset();
+  reloadData();
+});
+
+// ---------- 匯入（pccu_parser 產生的 JSON） ----------
+const HM = /^\d{1,2}:\d{2}$/;
+
+function toMillis(v) {
+  if (typeof v === "number") return v;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || ""));
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], 12, 0).getTime(); // 公告只有日期，取中午避免時區換日
+  const t = new Date(v).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+// 回傳 { schedule, notices, tasks } 筆數；格式錯誤時丟出 Error
+function importMine(jsonText) {
+  let data;
+  try { data = JSON.parse(jsonText); } catch { throw new Error("不是有效的 JSON，請確認完整貼上。"); }
+  const sem = activeSemester();
+  const schedule = (data.schedule || []).map((s, i) => {
+    if (!HM.test(s.start) || !HM.test(s.end) || !(s.weekday >= 0 && s.weekday <= 6) || !s.course)
+      throw new Error(`課表第 ${i + 1} 筆格式不正確`);
+    return { id: String(s.id || uid()), semester: s.semester || sem, weekday: s.weekday, start: s.start, end: s.end,
+      course: String(s.course), room: String(s.room || ""), teacher: String(s.teacher || "") };
+  });
+  const notices = (data.notices || []).map((n, i) => {
+    const posted = toMillis(n.posted ?? n.postedDate);
+    if (!n.title || posted === null) throw new Error(`公告第 ${i + 1} 筆格式不正確`);
+    return { id: String(n.id || uid()), semester: n.semester || sem, course: String(n.course || ""), title: String(n.title), posted, read: !!n.read };
+  });
+  const tasks = (data.tasks || []).map((t, i) => {
+    const due = toMillis(t.due);
+    if (!t.title || due === null) throw new Error(`作業第 ${i + 1} 筆格式不正確`);
+    return { id: String(t.id || uid()), semester: t.semester || sem, course: String(t.course || ""), title: String(t.title), due, done: !!t.done };
+  });
+  if (!schedule.length && !notices.length && !tasks.length) throw new Error("沒有可匯入的內容。");
+
+  const m = loadMine();
+  // 課表與公告：取代「匯入檔中出現的學期」的舊資料；作業：只新增、依標題＋課程＋截止時間去重
+  const semsS = new Set(schedule.map((x) => x.semester));
+  const semsN = new Set(notices.map((x) => x.semester));
+  m.schedule = m.schedule.filter((x) => !semsS.has(x.semester)).concat(schedule);
+  m.notices = m.notices.filter((x) => !semsN.has(x.semester)).concat(notices);
+  const key = (t) => `${t.course}|${t.title}|${t.due}`;
+  const have = new Set(m.tasks.map(key));
+  const added = tasks.filter((t) => !have.has(key(t)));
+  m.tasks = m.tasks.concat(added);
+  saveMine(m);
+  setMode("mine");
+  return { schedule: schedule.length, notices: notices.length, tasks: added.length };
+}
+
+async function doImport(text) {
+  try {
+    const r = importMine(text);
+    $("#importText").value = "";
+    await reloadData();
+    alert(`已匯入 ${r.schedule} 個上課時段、${r.notices} 則公告、${r.tasks} 份作業`);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+$("#btnImport").addEventListener("click", () => doImport($("#importText").value));
+$("#importFile").addEventListener("change", async (ev) => {
+  const f = ev.target.files && ev.target.files[0];
+  if (f) doImport(await f.text());
+  ev.target.value = "";
+});
+
+$("#modeSel").addEventListener("change", () => { setMode($("#modeSel").value); reloadData(); });
+$("#btnMine").addEventListener("click", () => switchView("mine"));
+$("#btnBannerMine").addEventListener("click", () => switchView("mine"));
 
 // ---------- 設定 ----------
 const SETTINGS_KEY = "pccu-reminder-settings";
@@ -490,7 +652,7 @@ function checkReminders() {
 
   const c = nextClass(DATA.schedule, new Date(now));
   if (c && c.startAt > now && c.startAt - now <= classLead * 60000) {
-    fire(`class-${c.course}-${c.startAt.getTime()}`, "快上課了", `${c.course}　📍${c.room}（${relTime(c.startAt - now)}）`, "./");
+    fire(`class-${c.course}-${c.startAt.getTime()}`, "快上課了", `${c.course}　📍${roomText(c.room)}（${relTime(c.startAt - now)}）`, "./");
   }
 
   // 每日總覽：到達設定時間後 3 小時內，每天只發一次
