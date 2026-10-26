@@ -1,37 +1,5 @@
-const CACHE = "pccu-reminder-v4";
-const ASSETS = ["./", "index.html", "style.css", "app.js", "data.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
-
-self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
-});
-
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
-});
-
-// 離線優先：靜態檔先讀快取，API 一律走網路
-self.addEventListener("fetch", (e) => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== "GET" || url.pathname.startsWith("/api/")) return;
-  e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request)));
-});
-
-// 後端 Web Push 送來的推播
-self.addEventListener("push", (e) => {
-  let p = { title: "課輔提醒", body: "" };
-  try { p = { ...p, ...e.data.json() }; } catch (_) { if (e.data) p.body = e.data.text(); }
-  e.waitUntil(self.registration.showNotification(p.title, {
-    body: p.body, tag: p.tag, icon: "icons/icon-192.png", badge: "icons/icon-192.png", data: { url: p.url || "./" }
-  }));
-});
-
-self.addEventListener("notificationclick", (e) => {
-  e.notification.close();
-  e.waitUntil(clients.matchAll({ type: "window" }).then((list) => {
-    for (const c of list) if ("focus" in c) return c.focus();
-    return clients.openWindow((e.notification.data && e.notification.data.url) || "./");
-  }));
-});
+const C='rollbook-v8';const SHELL=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-180.png'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)));self.skipWaiting()});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))));self.clients.claim()});
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;
+ e.respondWith(fetch(e.request).then(r=>{const cp=r.clone();caches.open(C).then(c=>c.put(e.request,cp));return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match('index.html'))))});
