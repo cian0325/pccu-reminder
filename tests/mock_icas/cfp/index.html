@@ -1,0 +1,122 @@
+<!doctype html>
+<!-- 模擬的課業輔導系統（內容全為虛構），用來測試爬蟲。結構仿照實際頁面（2026/10 觀察）：
+     * 未登入時 #CListTitle 仍然看得到，內容是「Login」；登入後是學期代碼（例如 1151）
+     * 公告點開是 #Popup 彈出視窗：#popMessage 內有「發佈老師：…」「公告內容：…」，關閉鈕是 .AnnoBtn
+       （頁面上另有一個看得見但永遠是空的 #dialog）
+     * 作業頁是 div 版面：.MateTitleBlock 是欄名，每份作業一個 .MateBlock；截止日期只有年月日
+     * 作業狀態：未繳交、已閱讀（老師已檢視你交的作業）
+     * 沒有作業的課程顯示「暫無任何內容」 -->
+<html><head><meta charset="utf-8"><title>課業輔導系統（模擬）</title></head>
+<body>
+<div id="infobar"><span>重要訊息</span> <span>!! 2026/10/10 系統維護 !!</span></div>
+<ul id="navlist"><li id="logintab"><a>登入</a></li><li id="logoutab" style="display:none"><a>登出</a></li></ul>
+
+<div id="login" hidden>
+  <p>請登入</p>
+  <input type="text" id="uid" placeholder="帳號"><input type="password" id="pw" placeholder="密碼">
+  <button id="loginBtn">登入</button>
+</div>
+
+<div id="app">
+  <div id="MainContainer">
+    <div id="Welcome"></div>
+    <div id="CListOutter"><div id="CListTitle">Login</div>
+      <div id="CListNav"><select id="CListYYM"><option value="1151">1151</option><option value="1142">1142</option></select></div>
+      <div id="MainList"></div>
+    </div>
+    <div class="BlockArea" id="MyNews"></div>
+    <div id="HomeworkPane"></div>
+  </div>
+</div>
+
+<div id="dialog" style="display:block;min-height:1px"></div>
+<div id="Popup" style="display:none;border:1px solid #888;padding:8px">
+  <div id="popInner"><h3 id="popTitle"></h3><div id="popMessage"></div>
+    <div id="msgBtnArea"><input type="button" class="AnnoBtn" value="關閉"></div></div>
+</div>
+
+<script>
+const cookie = (k) => (document.cookie.match(new RegExp("(?:^|; )" + k + "=([^;]*)")) || [])[1];
+const COURSES = {
+  "1151": [
+    { cc: "900001", title: "資工系 2A - 1001 範例程式設計", counts: [2, 0, 0, 1, 0] },
+    { cc: "900002", title: "通識 0 (01) - CE01 範例通識", counts: [0, 3, 0, 1, 0] },
+    { cc: "900003", title: "體育 0 (02) - 9008 範例體育", counts: [0, 0, 0, 1, 0] }
+  ],
+  "1142": [{ cc: "800001", title: "資工系 1A - 0001 舊學期課程", counts: [0, 0, 0, 1, 0] }]
+};
+const NOTICES = {
+  "1151": [
+    { cc: "900001", course: "範例程式設計", title: "期中考公告", date: "2026/10/24", unread: true, teacher: "王小明",
+      body: "期中考範圍：第 1～6 章。\n考試時間：11/4（三）13:10，地點大義館 0408。\n請攜帶學生證。",
+      link: { text: "考試範圍.pdf", href: "https://example.invalid/range.pdf" } },
+    { cc: "900002", course: "範例通識", title: "報告分組 & 說明", date: "2026/10/19", unread: false, teacher: "李小華",
+      body: "分組名單已上傳到教材區。" }
+  ],
+  "1142": [{ cc: "800001", course: "舊學期課程", title: "舊公告", date: "2026/05/01", unread: false, teacher: "張老師", body: "舊內容" }]
+};
+const mate = (rows) => `<div id="HomeBlock" class="MateTitleBlock"><div id="tHomeState" class="tMateCat">狀態</div>
+  <div id="tHomeUpdate" class="tMateUpdate">更新日期 <span id="SortID" class="sortarrow"></span></div>
+  <div id="tHomeEnd" class="tMateEnd">截止日期</div><div id="tHomeTitle" class="tMateTitle">作業標題</div></div>
+  <div id="SortList">` + rows.map((r, i) => `<div id="HomeBlock${i}" class="MateBlock"><div class="MateCat">${r[0]}</div>
+    <div class="MateUpdate">${r[1]}</div><div class="MateEnd">${r[2]}</div>
+    <div class="MateTitle">${r[3]}<div class="MateDesc">${r[4] || ""}</div></div></div>`).join("") + `</div>`;
+const HOMEWORK = {
+  "900001": mate([
+    ["未繳交", "2026-10-16 08:00:12", "2026/10/30", "作業一：串列", "完成第 3 章習題，繳交期限見上方。"],
+    ["已閱讀", "2026-09-20 10:11:12", "2026/09/27", "作業二：指標", ""],
+    ["未繳交", "2026-09-17 16:08:02", "", "第一週實習課表單", "https://forms.example.invalid/abc"]
+  ]),
+  "900002": `<ul class="HomeworkItems"><li>期中報告 繳交期限：115/11/05 12:00</li><li>閱讀心得（2026/10/01）</li></ul>`,
+  "900003": `<div>暫無任何內容</div>`,
+  "800001": mate([["未繳交", "2026-03-01 10:00:00", "2026/12/31", "舊學期作業", ""]])
+};
+
+function renderDashboard(yym) {
+  const c = COURSES[yym];
+  document.querySelector("#CListTitle").textContent = yym;
+  document.querySelector("#CListYYM").value = yym;
+  document.querySelector("#Welcome").textContent = "範例同學, 歡迎使用，課業輔導系統！";
+  document.querySelector("#MainList").innerHTML = `<div class="CListBlock">
+    <div class="CListRow"><div class="CListCName">課程名稱（未閱讀筆數）</div><div class="CListItem">公告</div><div class="CListItem">教材</div><div class="CListItem">投票</div><div class="CListItem">作業</div><div class="CListItem">討論</div></div>` +
+    c.map((x) => `<div class="CListRow"><div class="CListCName"><a href="/cfp/?ccode=${x.cc}#mainpage" title="${x.title}">${x.title}   </a></div>` +
+      x.counts.map((n, i) => `<div ${i === 0 ? `id="ACount${x.cc}" ` : ""}class="CListItem">${n}</div>`).join("") + `</div>`).join("") + `</div>`;
+  const ns = NOTICES[yym];
+  document.querySelector("#MyNews").innerHTML = `<div id="MyAnno" class="MessageBlock"><h2>最新公告</h2><div id="MyAnnoList">` +
+    ns.map((n, i) => `<div class="AnnoListItem" style="clear: both; padding: 2px;"><span id="AnnoClass${i}"><a href="?ccode=${n.cc}#mainpage">${n.course}</a> - </span>` +
+      (n.unread ? `<span id="new${i}" class="ReadState"><img src="new.gif"></span>` : "") +
+      `<span id="AnnoItemSN${i}" sn="${i}" cc="${n.cc}" style="cursor:pointer">${n.title.replace("&", "&amp;")} (${n.date})</span></div>`).join("") +
+    `</div></div><div id="MyAssi" class="MessageBlock"><h2>最新作業</h2><div id="MyAssiList">
+      <div class="AssiListItem"><span id="AssiClass0"><a href="?ccode=900001#homework">範例程式設計</a> - </span><span id="AssiItemSN0">[未繳交] 首頁上的作業 (2026/10/23)</span></div></div></div>`;
+  ns.forEach((n, i) => document.querySelector("#AnnoItemSN" + i).addEventListener("click", () => {
+    const p = document.querySelector("#Popup");
+    p.style.display = "block";   // 先顯示（還是上一則的內容），稍後才載入新內容 → 測試爬蟲不會讀到上一則
+    setTimeout(() => {
+      document.querySelector("#popTitle").textContent = n.title;
+      document.querySelector("#popMessage").innerHTML = `發佈老師：${n.teacher}<br>公告內容：<br>${n.body.replace(/\n/g, "<br>")}` +
+        (n.link ? `<p>附件：<a href="${n.link.href}">${n.link.text}</a></p>` : "");
+    }, 400);
+  }));
+}
+
+function route() {
+  const q = new URLSearchParams(location.search);
+  const cc = q.get("ccode");
+  document.querySelector("#logintab").style.display = "none";
+  document.querySelector("#logoutab").style.display = "";
+  if (cc && location.hash === "#homework") {
+    document.querySelector("#CListOutter").style.display = "none";
+    setTimeout(() => { document.querySelector("#HomeworkPane").innerHTML = `<div id="HomeworkBlock">${HOMEWORK[cc] || ""}</div>`; }, 400);
+  } else {
+    renderDashboard(cookie("yym") || "1142");   // 刻意預設顯示舊學期，測試爬蟲會切換學期
+  }
+}
+
+document.querySelector("#loginBtn").addEventListener("click", () => { document.cookie = "mockauth=1; path=/"; location.reload(); });
+document.querySelector("#CListYYM").addEventListener("change", (e) => { document.cookie = "yym=" + e.target.value + "; path=/"; location.reload(); });
+document.querySelector(".AnnoBtn").addEventListener("click", () => { document.querySelector("#Popup").style.display = "none"; });
+
+if (cookie("mockauth") === "1") route();
+else document.querySelector("#login").hidden = false;   // 未登入：#CListTitle 仍顯示「Login」
+</script>
+</body></html>

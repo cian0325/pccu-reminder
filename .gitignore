@@ -1,0 +1,10 @@
+# 編譯產物
+server-cpp/pccu_parser
+server-cpp/pccu_parser.exe
+server-cpp/reminder_planner
+# 個人資料：不要放進公開 repo
+my-data*.json
+crawl-report.txt
+pccu-dump/
+__pycache__/
+dist/
