@@ -99,3 +99,21 @@ h2 .link{float:right;background:none;border:0;color:var(--accent);font-size:13px
 .day-note.off,.meta.off{color:var(--ok)}
 .day.is-off .slot{opacity:.45;text-decoration:line-through}
 .muted-inline{font-size:12px;color:var(--muted);font-weight:400}
+
+.notice{cursor:pointer}
+.notice .preview{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet[hidden]{display:none}
+.sheet-card{position:relative;background:var(--card);color:var(--text);width:100%;max-width:640px;max-height:85vh;overflow:auto;
+  border-radius:18px 18px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+.sheet-close{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px}
+.sheet-title{font-size:19px;margin:4px 40px 4px 0;line-height:1.4}
+.notice-content{font-size:16px;line-height:1.75;margin:14px 0;word-break:break-word}
+.notice-content a,.links a,.src a{color:var(--accent)}
+.links{list-style:none;padding:0;margin:6px 0 12px}
+.links li{padding:6px 0;border-bottom:1px solid var(--line);word-break:break-all}
+body.sheet-open{overflow:hidden}
+.src{font-size:12px}
+.warn{color:var(--warn)}
+.report{font-size:13px;color:var(--muted);padding-left:18px}
+details summary{font-size:14px;color:var(--accent);cursor:pointer;margin:4px 0}

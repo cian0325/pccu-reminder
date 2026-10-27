@@ -43,7 +43,7 @@ function filterSemester(data, sem) {
 
 // ---------- 本機狀態（完成、貪睡、重要、進度、已發送記錄） ----------
 const STATE_KEY = "pccu-reminder-state";
-const emptyState = () => ({ done: {}, snooze: {}, star: {}, progress: {}, fired: {}, briefDate: "", sort: "prio" });
+const emptyState = () => ({ done: {}, snooze: {}, star: {}, progress: {}, fired: {}, read: {}, briefDate: "", sort: "prio" });
 let state = loadState();
 
 function loadState() {
@@ -64,7 +64,8 @@ function mergeLocal(data) {
       doneAt: t.doneAt || state.done[t.id] || null,
       star: !!state.star[t.id],
       prog: state.progress[t.id] || { stage: 0, note: "" }
-    }))
+    })),
+    notices: data.notices.map((n) => ({ ...n, read: !!n.read || !!state.read[n.id] }))
   };
 }
 
@@ -76,9 +77,9 @@ const MODE_KEY = "pccu-reminder-mode";
 function loadMine() {
   try {
     const m = JSON.parse(localStorage.getItem(MINE_KEY));
-    if (m) return { schedule: m.schedule || [], tasks: m.tasks || [], notices: m.notices || [] };
+    if (m) return { schedule: m.schedule || [], tasks: m.tasks || [], notices: m.notices || [], meta: m.meta || {} };
   } catch { /* ignore */ }
-  return { schedule: [], tasks: [], notices: [] };
+  return { schedule: [], tasks: [], notices: [], meta: {} };
 }
 function saveMine(m) { try { localStorage.setItem(MINE_KEY, JSON.stringify(m)); } catch { /* ignore */ } }
 function hasMine() { const m = loadMine(); return m.schedule.length + m.tasks.length + m.notices.length > 0; }
@@ -308,7 +309,8 @@ function taskItem(t, now, full) {
   let h = `<li class="task lv-${lv.k}" data-id="${esc(t.id)}">
     <div class="title"><button class="chk" data-act="done" aria-label="切換完成"${t.serverDone ? " disabled" : ""}>${t.done ? "☑" : "☐"}</button>
       <span class="ttl">${esc(t.title)}${t.star ? " ⭐" : ""}</span>${dueTag(t, now)}</div>
-    <div class="sub">${esc(t.course)}・${fmtDate(t.due)}・${t.done ? "已繳交" : relTime(t.due - now)}${t.done ? "" : `・優先度 ${lv.label}`}</div>`;
+    <div class="sub">${esc(t.course)}・${fmtDate(t.due)}${t.dueConfidence === "range" ? "（推測）" : ""}・${t.done ? "已繳交" : relTime(t.due - now)}${t.done ? "" : `・優先度 ${lv.label}`}</div>
+    ${t.source === "crawler" ? `<div class="sub src">🤖 自動抓取${t.dueConfidence === "range" ? "・截止時間是從日期範圍推測的，請到課輔系統確認" : ""}${t.url ? `・<a href="${esc(t.url)}" target="_blank" rel="noopener">在課輔系統開啟</a>` : ""}</div>` : ""}`;
   if (full && !t.done) {
     h += `<div class="bar" title="${STAGES[stageIdx].label}"><i style="width:${STAGES[stageIdx].pct}%"></i></div>
       <div class="chips">${STAGES.map((s, i) => `<button class="chip${i === stageIdx ? " on" : ""}" data-act="stage" data-stage="${i}">${s.label}</button>`).join("")}</div>
@@ -325,8 +327,35 @@ function taskItem(t, now, full) {
 }
 
 function noticeItem(n) {
-  return `<li class="notice ${n.read ? "" : "unread"}"><div class="title">${esc(n.title)}</div>
-    <div class="sub">${esc(n.course)}・${fmtDate(n.posted)}</div></li>`;
+  return `<li class="notice ${n.read ? "" : "unread"}" data-notice="${esc(n.id)}" role="button" tabindex="0">
+    <div class="title">${esc(n.title)}</div>
+    <div class="sub">${esc(n.course)}・${fmtDate(n.posted).replace(/ \d{2}:\d{2}$/, "").replace(/）\d{2}:\d{2}$/, "）")}${n.content ? "" : "・尚無內文"}</div>
+    ${n.content ? `<div class="preview">${esc(n.content.replace(/\s+/g, " ").slice(0, 60))}${n.content.length > 60 ? "…" : ""}</div>` : ""}</li>`;
+}
+
+// 內文只當純文字顯示（不執行學校頁面的 HTML），網址自動變成連結
+function linkify(text) {
+  return esc(text).replace(/https?:\/\/[^\s<>"'）)】]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`).replace(/\n/g, "<br>");
+}
+
+function openNotice(id) {
+  const n = DATA.notices.find((x) => x.id === id);
+  if (!n) return;
+  if (!n.read) { state.read[id] = Date.now(); saveState(); rebuild(); render(); }
+  $("#sheetBody").innerHTML = `<div class="label">${esc(n.course)}</div>
+    <h3 class="sheet-title">${esc(n.title)}</h3>
+    <div class="sub">${fmtDate(n.posted).replace(/）\d{2}:\d{2}$/, "）")}</div>
+    <div class="notice-content">${n.content ? linkify(n.content)
+      : '<p class="muted">這則公告還沒有內文。內文需要由電腦上的爬蟲抓取（見 README），或到課輔系統查看。</p>'}</div>
+    ${n.links && n.links.length ? `<div class="label">附件與連結</div><ul class="links">${n.links.map((l) => `<li><a href="${esc(l.href)}" target="_blank" rel="noopener">📎 ${esc(l.text || l.href)}</a></li>`).join("")}</ul>` : ""}
+    ${n.url ? `<a class="btn secondary small" href="${esc(n.url)}" target="_blank" rel="noopener">在課輔系統開啟</a>` : ""}`;
+  $("#sheet").hidden = false;
+  document.body.classList.add("sheet-open");
+  $("#sheetClose").focus();
+}
+function closeSheet() {
+  $("#sheet").hidden = true;
+  document.body.classList.remove("sheet-open");
 }
 
 // 有些課（例如體育）頁面上沒有教室
@@ -419,6 +448,19 @@ function renderHomeCalendar(now) {
     `<li class="muted">${calendar().loaded ? "30 天內沒有行事曆事件" : "尚未載入學校行事曆"}</li>`;
 }
 
+function renderSync(now) {
+  const meta = (getMode() === "mine" && loadMine().meta) || {};
+  const el = $("#syncStatus");
+  if (!meta.lastSync) { el.innerHTML = ""; $("#syncBanner").hidden = true; return; }
+  const t = new Date(meta.lastSync).getTime();
+  const ageH = (now - t) / HOUR;
+  const stale = ageH > 36;
+  el.innerHTML = `<p class="muted">🤖 上次爬蟲同步：${fmtDate(t)}${stale ? `　<b class="warn">已超過 ${Math.floor(ageH / 24)} 天，作業可能不是最新的</b>` : ""}</p>` +
+    (meta.report && meta.report.length ? `<details><summary>爬蟲訊息（${meta.report.length}）</summary><ul class="report">${meta.report.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></details>` : "");
+  $("#syncBanner").hidden = !stale;
+  $("#syncBanner").textContent = `作業資料是 ${Math.floor(ageH / 24)} 天前同步的，請在電腦上重新執行爬蟲並匯入。`;
+}
+
 function renderBrief(now) {
   const b = buildBrief(now);
   $("#brief").innerHTML = `<div class="label">今日總覽</div>` + b.lines.map((l) => `<div class="brief-line">${esc(l)}</div>`).join("");
@@ -463,6 +505,7 @@ function render() {
   $("#notices").innerHTML = notices.map(noticeItem).join("");
   const srcName = { demo: "示範資料（虛構，非真實課程）", manual: "我手動輸入的資料" }[DATA.source] || "課輔系統（後端同步）";
   $("#dataSource").textContent = "目前資料來源：" + srcName;
+  renderSync(now);
   $("#clock").textContent = activeSemester() + "・" + new Date(now).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
 }
 
@@ -480,11 +523,19 @@ function showSchedPane(pane) {
   $("#paneWeek").hidden = pane !== "week";
   $("#paneCal").hidden = pane !== "cal";
 }
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("#sheet").hidden) closeSheet();
+  if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.notice) { e.preventDefault(); openNotice(e.target.dataset.notice); }
+});
 $("#calPast").addEventListener("change", () => { state.calShowPast = $("#calPast").checked; saveState(); renderCalendar(Date.now()); });
 $("#btnHomeCal").addEventListener("click", () => { switchView("schedule"); showSchedPane("cal"); });
 
 // ---------- 作業互動（事件委派） ----------
 document.addEventListener("click", (e) => {
+  const noticeEl = e.target.closest("[data-notice]");
+  if (noticeEl && !e.target.closest("a")) { openNotice(noticeEl.dataset.notice); return; }
+  if (e.target.closest("#sheetClose") || e.target.id === "sheet") { closeSheet(); return; }
+
   const schedBtn = e.target.closest("#schedSeg button");
   if (schedBtn) { showSchedPane(schedBtn.dataset.pane); return; }
   const calBtn = e.target.closest("#calFilter button");
@@ -611,17 +662,24 @@ function importMine(jsonText) {
     return { id: String(s.id || uid()), semester: s.semester || sem, weekday: s.weekday, start: s.start, end: s.end,
       course: String(s.course), room: String(s.room || ""), teacher: String(s.teacher || "") };
   });
+  const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? String(u) : "");
   const notices = (data.notices || []).map((n, i) => {
     const posted = toMillis(n.posted ?? n.postedDate);
     if (!n.title || posted === null) throw new Error(`公告第 ${i + 1} 筆格式不正確`);
-    return { id: String(n.id || uid()), semester: n.semester || sem, course: String(n.course || ""), title: String(n.title), posted, read: !!n.read };
+    return { id: String(n.id || uid()), semester: n.semester || sem, course: String(n.course || ""), title: String(n.title), posted, read: !!n.read,
+      content: typeof n.content === "string" ? n.content.slice(0, 8000) : "",
+      links: (Array.isArray(n.links) ? n.links : []).map((l) => ({ text: String(l.text || l.href || ""), href: safeUrl(l.href) })).filter((l) => l.href).slice(0, 20),
+      url: safeUrl(n.url) };
   });
   const tasks = (data.tasks || []).map((t, i) => {
     const due = toMillis(t.due);
     if (!t.title || due === null) throw new Error(`作業第 ${i + 1} 筆格式不正確`);
-    return { id: String(t.id || uid()), semester: t.semester || sem, course: String(t.course || ""), title: String(t.title), due, done: !!t.done };
+    return { id: String(t.id || uid()), semester: t.semester || sem, course: String(t.course || ""), title: String(t.title), due, done: !!t.done,
+      source: t.source === "crawler" || data.source === "crawler" ? "crawler" : "manual",
+      dueConfidence: t.dueConfidence === "range" ? "range" : t.dueConfidence === "labelled" ? "labelled" : "",
+      url: safeUrl(t.url) };
   });
-  if (!schedule.length && !notices.length && !tasks.length) throw new Error("沒有可匯入的內容。");
+  if (!schedule.length && !notices.length && !tasks.length && data.source !== "crawler") throw new Error("沒有可匯入的內容。");
 
   const m = loadMine();
   // 課表與公告：取代「匯入檔中出現的學期」的舊資料；作業：只新增、依標題＋課程＋截止時間去重
@@ -629,10 +687,20 @@ function importMine(jsonText) {
   const semsN = new Set(notices.map((x) => x.semester));
   m.schedule = m.schedule.filter((x) => !semsS.has(x.semester)).concat(schedule);
   m.notices = m.notices.filter((x) => !semsN.has(x.semester)).concat(notices);
-  const key = (t) => `${t.course}|${t.title}|${t.due}`;
-  const have = new Set(m.tasks.map(key));
-  const added = tasks.filter((t) => !have.has(key(t)));
-  m.tasks = m.tasks.concat(added);
+  let added;
+  if (data.source === "crawler") {
+    // 爬蟲每次都抓到「目前所有作業」：取代同學期先前爬到的作業，保留你手動新增的作業。
+    // id 每次相同，所以你在 App 裡標的完成、重要、進度都會保留。
+    const semsT = new Set([data.semester || sem, ...tasks.map((t) => t.semester)]);
+    m.tasks = m.tasks.filter((t) => !(t.source === "crawler" && semsT.has(t.semester))).concat(tasks);
+    added = tasks;
+    m.meta = { ...(m.meta || {}), lastSync: data.generatedAt || new Date().toISOString(), report: Array.isArray(data.report) ? data.report.slice(0, 50).map(String) : [] };
+  } else {
+    const key = (t) => `${t.course}|${t.title}|${t.due}`;
+    const have = new Set(m.tasks.map(key));
+    added = tasks.filter((t) => !have.has(key(t)));
+    m.tasks = m.tasks.concat(added);
+  }
   saveMine(m);
   setMode("mine");
   return { schedule: schedule.length, notices: notices.length, tasks: added.length };
@@ -643,7 +711,8 @@ async function doImport(text) {
     const r = importMine(text);
     $("#importText").value = "";
     await reloadData();
-    alert(`已匯入 ${r.schedule} 個上課時段、${r.notices} 則公告、${r.tasks} 份作業`);
+    const rep = loadMine().meta?.report || [];
+    alert(`已匯入 ${r.schedule} 個上課時段、${r.notices} 則公告、${r.tasks} 份作業` + (rep.length ? `\n\n爬蟲有 ${rep.length} 則需要注意的訊息，可在「設定 → 資料來源」查看。` : ""));
   } catch (e) {
     alert(e.message);
   }
@@ -830,6 +899,7 @@ function checkReminders() {
   const q = new URLSearchParams(location.search);
   if (q.get("view")) switchView(q.get("view"));
   if (q.get("pane")) showSchedPane(q.get("pane"));
+  if (q.get("notice")) openNotice(q.get("notice"));
   if (q.get("task")) {
     const el = document.querySelector(`#tasks [data-id="${CSS.escape(q.get("task"))}"]`);
     if (el) { el.classList.add("flash"); el.scrollIntoView({ block: "center" }); }
