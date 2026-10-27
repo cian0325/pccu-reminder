@@ -85,3 +85,17 @@ nav button.active{color:var(--accent)}
 .form .btn{margin:0}
 #demoBanner .btn.small{margin-top:8px}
 .form textarea{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px;font-family:ui-monospace,monospace}
+
+h2 .link{float:right;background:none;border:0;color:var(--accent);font-size:13px;font-weight:600;padding:0}
+.cal-month{background:none!important;border:0!important;padding:10px 2px 2px!important;font-size:13px;color:var(--muted);font-weight:600}
+.cal{border-left:4px solid var(--line)!important}
+.cal-holiday{border-left-color:var(--ok)!important}
+.cal-exam{border-left-color:var(--danger)!important}
+.cal-course,.cal-deadline{border-left-color:var(--warn)!important}
+.cal-makeup,.cal-term{border-left-color:var(--accent)!important}
+.cal.past{opacity:.5}
+#calFilter{margin:0 0 6px}
+.day-note{font-size:13px;color:var(--accent);margin:-2px 0 6px}
+.day-note.off,.meta.off{color:var(--ok)}
+.day.is-off .slot{opacity:.45;text-decoration:line-through}
+.muted-inline{font-size:12px;color:var(--muted);font-weight:400}

@@ -114,6 +114,55 @@ function rebuild() {
   DATA = mergeLocal(filterSemester(RAW, activeSemester()));
 }
 
+// ---------- 學校行事曆 ----------
+const CAL_TYPES = {
+  holiday: { icon: "🏖️", label: "放假" },
+  exam: { icon: "📝", label: "考試" },
+  course: { icon: "🗂️", label: "選課・註冊" },
+  term: { icon: "🎓", label: "學期" },
+  makeup: { icon: "🔁", label: "補課・調整" },
+  deadline: { icon: "⏳", label: "截止" },
+  other: { icon: "📌", label: "其他" }
+};
+
+function ymd(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function ymdToDate(s) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function calendar() {
+  return window.SCHOOL_CALENDAR || { loaded: false, semesters: {}, events: [] };
+}
+function calEvents() {
+  return (calendar().events || []).filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.start || ""))
+    .map((e, i) => ({ ...e, id: e.id || `e${i}`, end: e.end || e.start, type: CAL_TYPES[e.type] ? e.type : "other" }))
+    .sort((x, y) => x.start.localeCompare(y.start) || x.end.localeCompare(y.end));
+}
+// 某天（YYYY-MM-DD）涵蓋的事件
+function eventsOn(day) {
+  return calEvents().filter((e) => e.start <= day && day <= e.end);
+}
+// 這天是否停課；回傳造成停課的事件或 null
+function noClassReason(day) {
+  return eventsOn(day).find((e) => e.noClass) || null;
+}
+// 這天在學期上課期間內嗎？行事曆沒提供學期期間時一律視為在期間內
+function inTerm(day) {
+  const sems = Object.values(calendar().semesters || {});
+  if (!sems.length) return true;
+  return sems.some((s) => s.start <= day && day <= s.end);
+}
+// 這天實際要上星期幾的課（補課日會改上別天的課）；停課回傳 null
+function effectiveWeekday(date) {
+  const day = ymd(date);
+  if (!inTerm(day) || noClassReason(day)) return null;
+  const mk = eventsOn(day).find((e) => Number.isInteger(e.followsWeekday));
+  return mk ? mk.followsWeekday : date.getDay();
+}
+
 // ---------- 時間工具 ----------
 function parseHM(hm, base) {
   const [h, m] = hm.split(":").map(Number);
@@ -128,8 +177,10 @@ function occurrences(schedule, from = new Date(), days = 14) {
   for (let i = 0; i < days; i++) {
     const day = new Date(from);
     day.setDate(from.getDate() + i);
+    const wd = effectiveWeekday(day);
+    if (wd === null) continue;
     for (const s of schedule) {
-      if (s.weekday === day.getDay()) {
+      if (s.weekday === wd) {
         out.push({ ...s, startAt: parseHM(s.start, day), endAt: parseHM(s.end, day) });
       }
     }
@@ -187,20 +238,28 @@ function priorityLevel(score) {
 // ---------- 每日總覽 ----------
 function buildBrief(now) {
   const d = new Date(now);
-  const todays = DATA.schedule.filter((s) => s.weekday === d.getDay()).sort((a, b) => a.start.localeCompare(b.start));
+  const wdToday = effectiveWeekday(d);
+  const off = noClassReason(ymd(now));
+  const todays = wdToday === null ? [] : DATA.schedule.filter((s) => s.weekday === wdToday).sort((a, b) => a.start.localeCompare(b.start));
+  const calToday = eventsOn(ymd(now)).filter((e) => !e.scope);
+  const calTomorrow = eventsOn(ymd(now + DAY)).filter((e) => !e.scope && e.start === ymd(now + DAY));
   const dueSoon = DATA.tasks.filter((t) => !t.done && t.due > now && t.due - now <= DAY).sort((a, b) => a.due - b.due);
   const overdue = DATA.tasks.filter((t) => !t.done && t.due <= now);
   const unread = DATA.notices.filter((n) => !n.read).length;
 
   const lines = [];
   if (todays.length) lines.push(`🎓 今天 ${todays.length} 堂課：` + todays.map((s) => `${s.start} ${s.course}（${roomText(s.room)}）`).join("、"));
-  else lines.push("🎓 今天沒有課");
+  else lines.push(off ? `🎓 今天停課（${off.title}）` : "🎓 今天沒有課");
+  if (calToday.length) lines.push("📅 今天：" + calToday.map((e) => e.title).join("、"));
+  if (calTomorrow.length) lines.push("📅 明天：" + calTomorrow.map((e) => e.title).join("、"));
   if (dueSoon.length) lines.push(`⏰ 24 小時內截止 ${dueSoon.length} 份：` + dueSoon.map((t) => t.title).join("、"));
   else lines.push("⏰ 24 小時內沒有作業截止");
   if (overdue.length) lines.push(`⚠️ 已逾期未完成 ${overdue.length} 份`);
   if (unread) lines.push(`📢 未讀公告 ${unread} 則`);
 
-  let body = todays.length ? `今天 ${todays.length} 堂課，第一堂 ${todays[0].start} ${todays[0].course}（${roomText(todays[0].room)}）。` : "今天沒有課。";
+  let body = todays.length ? `今天 ${todays.length} 堂課，第一堂 ${todays[0].start} ${todays[0].course}（${roomText(todays[0].room)}）。`
+    : off ? `今天停課（${off.title}）。` : "今天沒有課。";
+  if (calTomorrow.length) body += `明天：${calTomorrow.map((e) => e.title).join("、")}。`;
   body += dueSoon.length ? `24 小時內有 ${dueSoon.length} 份作業截止。` : "24 小時內沒有作業截止。";
   if (unread) body += `未讀公告 ${unread} 則。`;
   return { title: `今日總覽 ${fmtDate(now).split("）")[0]}）`, body, lines };
@@ -281,9 +340,11 @@ function mapUrl(room) {
 function renderNextClass(now) {
   const el = $("#nextClass");
   const c = nextClass(DATA.schedule, new Date(now));
-  if (!c) { el.innerHTML = '<div class="label">下一堂課</div><div class="name">近期沒有課程</div>'; return; }
+  const off = noClassReason(ymd(now));
+  const offLine = off ? `<div class="meta off">🏖️ 今天停課：${esc(off.title)}</div>` : "";
+  if (!c) { el.innerHTML = `<div class="label">下一堂課</div><div class="name">近期沒有課程</div>${offLine}`; return; }
   const ongoing = c.startAt <= now;
-  el.innerHTML = `<div class="label">${ongoing ? "正在上課" : "下一堂課"}</div>
+  el.innerHTML = `${offLine}<div class="label">${ongoing ? "正在上課" : "下一堂課"}</div>
     <div class="name">${esc(c.course)}</div>
     <div class="meta">📍 ${esc(roomText(c.room))}　🕘 ${fmtDate(c.startAt)} – ${c.end}</div>
     <div class="meta">${ongoing ? "進行中" : relTime(c.startAt - now) + "開始"}・${esc(c.teacher || "")}</div>
@@ -292,6 +353,8 @@ function renderNextClass(now) {
 
 function renderSchedule(now) {
   const today = new Date(now).getDay();
+  const ws = weekStart(now);
+  const dateOfWd = (wd) => ymd(ws + ((wd + 6) % 7) * DAY);
   const days = [1, 2, 3, 4, 5];
   if (DATA.schedule.some((s) => s.weekday === 6)) days.push(6);
   if (DATA.schedule.some((s) => s.weekday === 0)) days.push(0);
@@ -301,8 +364,59 @@ function renderSchedule(now) {
       ? slots.map((s) => `<div class="slot"><div class="time">${s.start}–${s.end}</div>
           <div><div>${esc(s.course)}</div><div class="room">${esc(roomText(s.room))}</div></div></div>`).join("")
       : '<div class="muted">沒有課</div>';
-    return `<div class="day ${wd === today ? "today" : ""}"><h3>${WEEKDAY_NAMES[wd]}${wd === today ? "（今天）" : ""}</h3>${body}</div>`;
+    const dk = dateOfWd(wd);
+    const off = noClassReason(dk);
+    const mk = eventsOn(dk).find((e) => Number.isInteger(e.followsWeekday));
+    const md = dk.slice(5).replace("-", "/").replace(/^0/, "");
+    const note = off ? `<div class="day-note off">🏖️ 停課：${esc(off.title)}</div>`
+      : mk ? `<div class="day-note">🔁 ${esc(mk.title)}</div>` : "";
+    return `<div class="day ${wd === today ? "today" : ""}${off ? " is-off" : ""}"><h3>${WEEKDAY_NAMES[wd]} <span class="muted-inline">${md}</span>${wd === today ? "（今天）" : ""}</h3>${note}${body}</div>`;
   }).join("");
+}
+
+function calItem(e, now) {
+  const t = CAL_TYPES[e.type];
+  const s = ymdToDate(e.start), en = ymdToDate(e.end);
+  const fmt = (d) => `${d.getMonth() + 1}/${d.getDate()}（${WEEKDAY_NAMES[d.getDay()].slice(1)}）`;
+  const range = e.start === e.end ? fmt(s) : `${fmt(s)} – ${fmt(en)}`;
+  const today = ymd(now);
+  const days = Math.round((s - ymdToDate(today)) / DAY);
+  const when = e.start === today && e.end === today ? "今天" : e.start <= today && today <= e.end ? "進行中"
+    : days === 1 ? "明天" : days > 0 ? `${days} 天後` : "";
+  const tags = [e.noClass ? '<span class="tag urgent">停課</span>' : "",
+    e.scope ? `<span class="tag done">${esc(e.scope)}</span>` : "", Number.isInteger(e.followsWeekday) ? `<span class="tag soon">上${WEEKDAY_NAMES[e.followsWeekday]}的課</span>` : ""].join("");
+  return `<li class="cal cal-${e.type}${e.end < today ? " past" : ""}"><div class="title">${t.icon} ${esc(e.title)}${tags}</div>
+    <div class="sub">${range}${when ? "・" + when : ""}・${t.label}${e.derived ? "・依附註整理" : ""}</div></li>`;
+}
+
+function renderCalendar(now) {
+  const cal = calendar();
+  const today = ymd(now);
+  const filter = state.calFilter || "all";
+  let list = calEvents().filter((e) => filter === "all" || e.type === filter || (filter === "noClass" && e.noClass));
+  if (!state.calShowPast) list = list.filter((e) => e.end >= today);
+
+  $("#calStatus").innerHTML = cal.loaded
+    ? `資料來源：<a href="${esc(cal.sourceUrl)}" target="_blank" rel="noopener">${esc(cal.source)}</a>，以學校公告為準。`
+    : "尚未載入學校行事曆。";
+  document.querySelectorAll("#calFilter button").forEach((b) => b.classList.toggle("on", b.dataset.f === filter));
+  $("#calPast").checked = !!state.calShowPast;
+
+  if (!list.length) { $("#calList").innerHTML = `<li class="muted">${cal.loaded ? "沒有符合的事件" : "尚未載入行事曆"}</li>`; return; }
+  let html = "", month = "";
+  for (const e of list) {
+    const m = e.start.slice(0, 7);
+    if (m !== month) { month = m; const [y, mm] = m.split("-"); html += `<li class="cal-month">${y} 年 ${Number(mm)} 月</li>`; }
+    html += calItem(e, now);
+  }
+  $("#calList").innerHTML = html;
+}
+
+function renderHomeCalendar(now) {
+  const today = ymd(now), until = ymd(now + 30 * DAY);
+  const soon = calEvents().filter((e) => !e.scope && e.end >= today && e.start <= until).slice(0, 3);
+  $("#homeCal").innerHTML = soon.map((e) => calItem(e, now)).join("") ||
+    `<li class="muted">${calendar().loaded ? "30 天內沒有行事曆事件" : "尚未載入學校行事曆"}</li>`;
 }
 
 function renderBrief(now) {
@@ -342,6 +456,8 @@ function render() {
   $("#demoBanner").hidden = DATA.source !== "demo";
   renderStats(now);
   renderSchedule(now);
+  renderCalendar(now);
+  renderHomeCalendar(now);
   $("#tasks").innerHTML = sortedTasks(now, state.sort).map((t) => taskItem(t, now, true)).join("") || '<li class="muted">這個學期沒有作業</li>';
   document.querySelectorAll("#sortSeg button").forEach((b) => b.classList.toggle("on", b.dataset.sort === state.sort));
   $("#notices").innerHTML = notices.map(noticeItem).join("");
@@ -359,8 +475,21 @@ function switchView(name) {
 }
 document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => switchView(b.dataset.view)));
 
+function showSchedPane(pane) {
+  document.querySelectorAll("#schedSeg button").forEach((b) => b.classList.toggle("on", b.dataset.pane === pane));
+  $("#paneWeek").hidden = pane !== "week";
+  $("#paneCal").hidden = pane !== "cal";
+}
+$("#calPast").addEventListener("change", () => { state.calShowPast = $("#calPast").checked; saveState(); renderCalendar(Date.now()); });
+$("#btnHomeCal").addEventListener("click", () => { switchView("schedule"); showSchedPane("cal"); });
+
 // ---------- 作業互動（事件委派） ----------
 document.addEventListener("click", (e) => {
+  const schedBtn = e.target.closest("#schedSeg button");
+  if (schedBtn) { showSchedPane(schedBtn.dataset.pane); return; }
+  const calBtn = e.target.closest("#calFilter button");
+  if (calBtn) { state.calFilter = calBtn.dataset.f; saveState(); renderCalendar(Date.now()); return; }
+
   const sortBtn = e.target.closest("#sortSeg button");
   if (sortBtn) { state.sort = sortBtn.dataset.sort; saveState(); render(); return; }
 
@@ -544,7 +673,8 @@ function saveSettings() {
       classLead: Number($("#classLead").value),
       semester: $("#semesterSel").value,
       briefOn: $("#briefOn").checked,
-      briefTime: $("#briefTime").value || "07:30"
+      briefTime: $("#briefTime").value || "07:30",
+      calOn: $("#calOn").checked
     }));
   } catch { /* ignore */ }
 }
@@ -554,6 +684,7 @@ function applySettings() {
   if (s.classLead) $("#classLead").value = s.classLead;
   $("#briefOn").checked = s.briefOn !== false;
   $("#briefTime").value = s.briefTime || "07:30";
+  $("#calOn").checked = s.calOn !== false;
   fillSemesterSelect(s.semester || "auto");
 }
 
@@ -565,7 +696,7 @@ function fillSemesterSelect(selected) {
 }
 
 $("#semesterSel").addEventListener("change", () => { saveSettings(); rebuild(); render(); });
-document.querySelectorAll("[data-lead], #classLead, #briefOn, #briefTime").forEach((el) => el.addEventListener("change", saveSettings));
+document.querySelectorAll("[data-lead], #classLead, #briefOn, #briefTime, #calOn").forEach((el) => el.addEventListener("change", saveSettings));
 
 $("#btnReset").addEventListener("click", () => {
   if (!confirm("清除本機的完成、進度、重要、備註與提醒記錄？")) return;
@@ -655,6 +786,22 @@ function checkReminders() {
     fire(`class-${c.course}-${c.startAt.getTime()}`, "快上課了", `${c.course}　📍${roomText(c.room)}（${relTime(c.startAt - now)}）`, "./");
   }
 
+  // 行事曆：考試、選課、截止、停課、補課 → 前一天 19:00 後提醒一次，當天開啟 App 也會補發
+  if (s.calOn !== false) {
+    const today = ymd(now), tomorrow = ymd(now + DAY);
+    const hour = new Date(now).getHours();
+    const important = (e) => !e.scope && (e.noClass || ["exam", "course", "deadline", "makeup"].includes(e.type));
+    for (const e of calEvents()) {
+      if (!important(e)) continue;
+      const isTomorrow = e.start === tomorrow && hour >= 19;
+      const isToday = e.start === today;
+      if (!isTomorrow && !isToday) continue;
+      const when = isToday ? "今天" : "明天";
+      const extra = e.noClass ? "（停課）" : Number.isInteger(e.followsWeekday) ? `（上${WEEKDAY_NAMES[e.followsWeekday]}的課）` : "";
+      fire(`cal-${e.start}-${e.title}`, `行事曆：${when}${CAL_TYPES[e.type].label}`, `${e.title}${extra}`, "./?view=schedule&pane=cal");
+    }
+  }
+
   // 每日總覽：到達設定時間後 3 小時內，每天只發一次
   if (s.briefOn !== false) {
     const [bh, bm] = (s.briefTime || "07:30").split(":").map(Number);
@@ -682,6 +829,7 @@ function checkReminders() {
   // 從通知點進來：?view=tasks&task=ID
   const q = new URLSearchParams(location.search);
   if (q.get("view")) switchView(q.get("view"));
+  if (q.get("pane")) showSchedPane(q.get("pane"));
   if (q.get("task")) {
     const el = document.querySelector(`#tasks [data-id="${CSS.escape(q.get("task"))}"]`);
     if (el) { el.classList.add("flash"); el.scrollIntoView({ block: "center" }); }

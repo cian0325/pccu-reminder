@@ -1,23 +1,16 @@
 {
- "name": "堂數點名簿",
- "short_name": "點名簿",
- "start_url": "./",
- "scope": "./",
- "display": "standalone",
- "background_color": "#f4f6f9",
- "theme_color": "#2a4a7b",
- "lang": "zh-Hant",
- "icons": [
-  {
-   "src": "icon-192.png",
-   "sizes": "192x192",
-   "type": "image/png"
-  },
-  {
-   "src": "icon-512.png",
-   "sizes": "512x512",
-   "type": "image/png",
-   "purpose": "any maskable"
-  }
- ]
+  "name": "文大課輔提醒",
+  "short_name": "課輔提醒",
+  "description": "作業截止、下堂課教室與公告提醒",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "zh-TW",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
 }
