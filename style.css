@@ -117,3 +117,7 @@ body.sheet-open{overflow:hidden}
 .warn{color:var(--warn)}
 .report{font-size:13px;color:var(--muted);padding-left:18px}
 details summary{font-size:14px;color:var(--accent);cursor:pointer;margin:4px 0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom));z-index:30;
+  max-width:min(560px,calc(100% - 32px));background:var(--text);color:var(--bg);padding:10px 14px;border-radius:12px;
+  font-size:14px;line-height:1.5;white-space:pre-line;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.toast[hidden]{display:none}

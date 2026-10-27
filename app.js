@@ -1,6 +1,22 @@
 "use strict";
 
 const WEEKDAY_NAMES = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+// 在 Claude 網頁（Artifact）裡執行時，資料由 Claude 爬蟲後直接寫進雲端資料庫，App 自動更新
+const IN_CLAUDE = !!(window.claude && typeof window.claude.use === "function");
+
+// 本機儲存：先存在記憶體，再盡量寫進 localStorage。
+// 有些環境（私密瀏覽、部分 Claude 檢視器）localStorage 會丟錯或讀不到；這時 App 仍要能用這次開啟期間的資料。
+const MEM = {};
+const kv = {
+  get(k) {
+    if (Object.prototype.hasOwnProperty.call(MEM, k)) return MEM[k];
+    try { const v = localStorage.getItem(k); MEM[k] = v; return v; } catch { return null; }
+  },
+  set(k, v) {
+    MEM[k] = v;
+    try { localStorage.setItem(k, v); } catch { /* 只留在記憶體 */ }
+  }
+};
 const $ = (s) => document.querySelector(s);
 const HOUR = 3600 * 1000;
 const DAY = 24 * HOUR;
@@ -12,6 +28,17 @@ const STAGES = [
   { label: "除錯測試", pct: 75 },
   { label: "整理繳交", pct: 90 }
 ];
+
+// ---------- 頁內提示 ----------
+let toastTimer = null;
+function toast(msg, ms = 4000) {
+  const el = $("#toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, ms);
+}
 
 // ---------- 學期 ----------
 // 民國年 = 西元年 - 1911。第 1 學期：8 月～隔年 1 月；第 2 學期：2 月～7 月。
@@ -47,10 +74,10 @@ const emptyState = () => ({ done: {}, snooze: {}, star: {}, progress: {}, fired:
 let state = loadState();
 
 function loadState() {
-  try { return Object.assign(emptyState(), JSON.parse(localStorage.getItem(STATE_KEY)) || {}); } catch { return emptyState(); }
+  try { return Object.assign(emptyState(), JSON.parse(kv.get(STATE_KEY)) || {}); } catch { return emptyState(); }
 }
 function saveState() {
-  try { localStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch { /* 私密瀏覽等情況 */ }
+  try { kv.set(STATE_KEY, JSON.stringify(state)); } catch { /* 私密瀏覽等情況 */ }
 }
 
 // 把本機狀態合併進任務；伺服器標記為已完成的作業不能在本機取消
@@ -76,18 +103,18 @@ const MODE_KEY = "pccu-reminder-mode";
 
 function loadMine() {
   try {
-    const m = JSON.parse(localStorage.getItem(MINE_KEY));
+    const m = JSON.parse(kv.get(MINE_KEY));
     if (m) return { schedule: m.schedule || [], tasks: m.tasks || [], notices: m.notices || [], meta: m.meta || {} };
   } catch { /* ignore */ }
   return { schedule: [], tasks: [], notices: [], meta: {} };
 }
-function saveMine(m) { try { localStorage.setItem(MINE_KEY, JSON.stringify(m)); } catch { /* ignore */ } }
+function saveMine(m) { try { kv.set(MINE_KEY, JSON.stringify(m)); } catch { /* ignore */ } }
 function hasMine() { const m = loadMine(); return m.schedule.length + m.tasks.length + m.notices.length > 0; }
 function getMode() {
-  try { const v = localStorage.getItem(MODE_KEY); if (v === "mine" || v === "demo") return v; } catch { /* ignore */ }
-  return hasMine() ? "mine" : "demo";
+  try { const v = kv.get(MODE_KEY); if (v === "mine" || v === "demo") return v; } catch { /* ignore */ }
+  return hasMine() || IN_CLAUDE ? "mine" : "demo";
 }
-function setMode(v) { try { localStorage.setItem(MODE_KEY, v); } catch { /* ignore */ } }
+function setMode(v) { try { kv.set(MODE_KEY, v); } catch { /* ignore */ } }
 const uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 async function loadData() {
@@ -97,6 +124,8 @@ async function loadData() {
       if (r.ok) return await r.json();
     }
   } catch (e) { /* fall through */ }
+  // Claude 網頁版第一次打開、手機上還沒有任何資料：等雲端資料，不顯示示範資料
+  if (IN_CLAUDE && !hasMine()) return { schedule: [], tasks: [], notices: [], source: "cloud-wait" };
   if (getMode() === "mine") return { ...loadMine(), source: "manual" };
   return window.DEMO_DATA;
 }
@@ -344,7 +373,7 @@ function openNotice(id) {
   if (!n.read) { state.read[id] = Date.now(); saveState(); rebuild(); render(); }
   $("#sheetBody").innerHTML = `<div class="label">${esc(n.course)}</div>
     <h3 class="sheet-title">${esc(n.title)}</h3>
-    <div class="sub">${fmtDate(n.posted).replace(/）\d{2}:\d{2}$/, "）")}</div>
+    <div class="sub">${fmtDate(n.posted).replace(/）\d{2}:\d{2}$/, "）")}${n.teacher ? `・${esc(n.teacher)}` : ""}</div>
     <div class="notice-content">${n.content ? linkify(n.content)
       : '<p class="muted">這則公告還沒有內文。內文需要由電腦上的爬蟲抓取（見 README），或到課輔系統查看。</p>'}</div>
     ${n.links && n.links.length ? `<div class="label">附件與連結</div><ul class="links">${n.links.map((l) => `<li><a href="${esc(l.href)}" target="_blank" rel="noopener">📎 ${esc(l.text || l.href)}</a></li>`).join("")}</ul>` : ""}
@@ -353,6 +382,31 @@ function openNotice(id) {
   document.body.classList.add("sheet-open");
   $("#sheetClose").focus();
 }
+function openNoteEditor(t) {
+  const p = state.progress[t.id] || { stage: 0, note: "" };
+  $("#sheetBody").innerHTML = `<div class="label">${esc(t.course)}</div>
+    <h3 class="sheet-title">${esc(t.title)}</h3>
+    <form class="form" id="noteForm">
+      <label for="noteText" class="muted">備註（例如：卡在 operator&lt;&lt; 的 friend 宣告）</label>
+      <textarea id="noteText" rows="4" maxlength="200"></textarea>
+      <button class="btn" type="submit">儲存備註</button>
+    </form>`;
+  $("#noteText").value = p.note || "";
+  $("#noteForm").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    p.note = $("#noteText").value.trim().slice(0, 200);
+    state.progress[t.id] = p;
+    saveState();
+    closeSheet();
+    rebuild();
+    render();
+    toast(p.note ? "備註已儲存" : "備註已清除");
+  });
+  $("#sheet").hidden = false;
+  document.body.classList.add("sheet-open");
+  $("#noteText").focus();
+}
+
 function closeSheet() {
   $("#sheet").hidden = true;
   document.body.classList.remove("sheet-open");
@@ -503,8 +557,13 @@ function render() {
   $("#tasks").innerHTML = sortedTasks(now, state.sort).map((t) => taskItem(t, now, true)).join("") || '<li class="muted">這個學期沒有作業</li>';
   document.querySelectorAll("#sortSeg button").forEach((b) => b.classList.toggle("on", b.dataset.sort === state.sort));
   $("#notices").innerHTML = notices.map(noticeItem).join("");
-  const srcName = { demo: "示範資料（虛構，非真實課程）", manual: "我手動輸入的資料" }[DATA.source] || "課輔系統（後端同步）";
+  const srcName = { demo: "示範資料（虛構，非真實課程）", manual: IN_CLAUDE ? "課輔系統（由 Claude 爬蟲同步）" : "我手動輸入的資料",
+    "cloud-wait": "等待雲端同步" }[DATA.source] || "課輔系統（後端同步）";
   $("#dataSource").textContent = "目前資料來源：" + srcName;
+  $("#cloudStatus").hidden = !IN_CLAUDE;
+  $("#cloudStatus").textContent = cloudText();
+  $("#cloudBanner").hidden = !(IN_CLAUDE && (cloudState === "empty" || DATA.source === "cloud-wait"));
+  $("#cloudBanner").textContent = cloudState === "empty" ? cloudText() : "正在從雲端載入你的課表、作業與公告…";
   renderSync(now);
   $("#clock").textContent = activeSemester() + "・" + new Date(now).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
 }
@@ -580,14 +639,9 @@ document.addEventListener("click", (e) => {
       state.progress[id] = p;
       break;
     }
-    case "note": {
-      const p = state.progress[id] || { stage: 0, note: "" };
-      const v = prompt("備註（例如：卡在 operator<< 的 friend 宣告）", p.note || "");
-      if (v === null) return;
-      p.note = v.trim().slice(0, 200);
-      state.progress[id] = p;
-      break;
-    }
+    case "note":
+      openNoteEditor(t);
+      return;
     default: return;
   }
   saveState();
@@ -614,7 +668,7 @@ function renderMine() {
 $("#formCourse").addEventListener("submit", (ev) => {
   ev.preventDefault();
   const f = ev.target.elements;
-  if (f.end.value <= f.start.value) return alert("下課時間必須晚於上課時間");
+  if (f.end.value <= f.start.value) return toast("下課時間必須晚於上課時間");
   const m = loadMine();
   m.schedule.push({
     id: uid(), semester: activeSemester(), weekday: Number(f.weekday.value),
@@ -631,7 +685,7 @@ $("#formTask").addEventListener("submit", (ev) => {
   ev.preventDefault();
   const f = ev.target.elements;
   const due = new Date(f.due.value).getTime();
-  if (Number.isNaN(due)) return alert("請選擇截止時間");
+  if (Number.isNaN(due)) return toast("請選擇截止時間");
   const m = loadMine();
   m.tasks.push({ id: uid(), semester: activeSemester(), course: f.course.value.trim(), title: f.title.value.trim(), due, done: false });
   saveMine(m);
@@ -669,7 +723,7 @@ function importMine(jsonText) {
     return { id: String(n.id || uid()), semester: n.semester || sem, course: String(n.course || ""), title: String(n.title), posted, read: !!n.read,
       content: typeof n.content === "string" ? n.content.slice(0, 8000) : "",
       links: (Array.isArray(n.links) ? n.links : []).map((l) => ({ text: String(l.text || l.href || ""), href: safeUrl(l.href) })).filter((l) => l.href).slice(0, 20),
-      url: safeUrl(n.url) };
+      url: safeUrl(n.url), teacher: typeof n.teacher === "string" ? n.teacher.slice(0, 40) : "" };
   });
   const tasks = (data.tasks || []).map((t, i) => {
     const due = toMillis(t.due);
@@ -712,9 +766,9 @@ async function doImport(text) {
     $("#importText").value = "";
     await reloadData();
     const rep = loadMine().meta?.report || [];
-    alert(`已匯入 ${r.schedule} 個上課時段、${r.notices} 則公告、${r.tasks} 份作業` + (rep.length ? `\n\n爬蟲有 ${rep.length} 則需要注意的訊息，可在「設定 → 資料來源」查看。` : ""));
+    toast(`已匯入 ${r.schedule} 個上課時段、${r.notices} 則公告、${r.tasks} 份作業` + (rep.length ? `。爬蟲有 ${rep.length} 則需要注意的訊息，可在「設定 → 資料來源」查看。` : ""), 6000);
   } catch (e) {
-    alert(e.message);
+    toast(e.message, 6000);
   }
 }
 $("#btnImport").addEventListener("click", () => doImport($("#importText").value));
@@ -732,12 +786,12 @@ $("#btnBannerMine").addEventListener("click", () => switchView("mine"));
 const SETTINGS_KEY = "pccu-reminder-settings";
 
 function loadSettings() {
-  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; }
+  try { return JSON.parse(kv.get(SETTINGS_KEY)) || {}; } catch { return {}; }
 }
 function saveSettings() {
   const leads = [...document.querySelectorAll("[data-lead]")].filter((c) => c.checked).map((c) => Number(c.dataset.lead));
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+    kv.set(SETTINGS_KEY, JSON.stringify({
       leads,
       classLead: Number($("#classLead").value),
       semester: $("#semesterSel").value,
@@ -767,8 +821,18 @@ function fillSemesterSelect(selected) {
 $("#semesterSel").addEventListener("change", () => { saveSettings(); rebuild(); render(); });
 document.querySelectorAll("[data-lead], #classLead, #briefOn, #briefTime, #calOn").forEach((el) => el.addEventListener("change", saveSettings));
 
+let resetArmed = 0;
 $("#btnReset").addEventListener("click", () => {
-  if (!confirm("清除本機的完成、進度、重要、備註與提醒記錄？")) return;
+  const b = $("#btnReset");
+  if (Date.now() - resetArmed > 5000) {
+    resetArmed = Date.now();
+    b.textContent = "再按一次確認清除";
+    setTimeout(() => { if (Date.now() - resetArmed >= 5000) b.textContent = "重設本機資料"; }, 5100);
+    return;
+  }
+  resetArmed = 0;
+  b.textContent = "重設本機資料";
+  toast("已清除這支手機上的完成、進度、重要、備註與提醒記錄");
   state = emptyState();
   saveState();
   rebuild();
@@ -779,8 +843,19 @@ $("#btnReset").addEventListener("click", () => {
 const isStandalone = window.navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
+function canNotify() {
+  return !IN_CLAUDE && "Notification" in window && Notification.permission === "granted";
+}
+
 function updateNotifStatus() {
   const el = $("#notifStatus");
+  if (IN_CLAUDE) {
+    el.textContent = "在 Claude 網頁裡無法發送手機系統通知；到了提醒時間，打開這個頁面時會在畫面上方提醒你。需要手機通知請改用加入主畫面的 App 版。";
+    $("#btnNotif").hidden = true;
+    $("#btnTest").hidden = true;
+    $("#iosHint").hidden = true;
+    return;
+  }
   if (!("Notification" in window)) {
     el.textContent = "此瀏覽器不支援通知。iPhone 請以「加入主畫面」方式開啟。";
     return;
@@ -801,19 +876,20 @@ $("#btnNotif").addEventListener("click", async () => {
   updateNotifStatus();
 });
 $("#btnTest").addEventListener("click", async () => {
-  if (Notification.permission !== "granted") return alert("請先開啟通知");
+  if (!("Notification" in window) || Notification.permission !== "granted") return toast("請先開啟通知");
   const t = sortedTasks(Date.now(), "prio").find((x) => !x.done);
   await showNotification("作業快截止了", t ? `${t.course}：${t.title}（${relTime(t.due - Date.now())}）` : "測試通知", "test", t ? `./?view=tasks&task=${encodeURIComponent(t.id)}` : "./");
 });
 $("#btnBrief").addEventListener("click", async () => {
-  if (Notification.permission !== "granted") return alert("請先開啟通知");
+  if (!("Notification" in window) || Notification.permission !== "granted") return toast(buildBrief(Date.now()).body, 8000);
   const b = buildBrief(Date.now());
   await showNotification(b.title, b.body, "brief-test", "./");
 });
 
 // ---------- 前景檢查提醒（App 開著時的備援；背景推播由後端 Web Push 負責） ----------
 function checkReminders() {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  // 不能發系統通知時（例如在 Claude 網頁裡），改在畫面上提示；兩者都會記錄已提醒過，不重複
+  if (!canNotify() && !IN_CLAUDE) return;
   const s = loadSettings();
   const leads = s.leads || [1440, 180];
   const classLead = s.classLead || 30;
@@ -826,8 +902,10 @@ function checkReminders() {
     if (state.fired[key]) return;
     state.fired[key] = now;
     saveState();
-    showNotification(title, body, key, url);
+    if (canNotify()) showNotification(title, body, key, url);
+    else pending.push(`${title}：${body}`);
   };
+  const pending = [];
 
   for (const t of DATA.tasks) {
     if (t.done) continue;
@@ -879,14 +957,52 @@ function checkReminders() {
       state.briefDate = dateKey(now);
       saveState();
       const b = buildBrief(now);
-      showNotification(b.title, b.body, "brief-" + dateKey(now), "./");
+      if (canNotify()) showNotification(b.title, b.body, "brief-" + dateKey(now), "./");
+      else pending.push(`${b.title}：${b.body}`);
     }
   }
+  if (pending.length) toast(pending.slice(0, 3).join("\n"), 9000);
+}
+
+// ---------- 雲端同步（Claude 網頁版） ----------
+// Claude 爬蟲後把結果寫進這個頁面的資料庫 sync/latest；頁面訂閱它，有新資料就自動匯入。
+// 你在手機上標的完成、重要、進度、備註只存在這支手機，不會被同步覆蓋。
+let cloudState = IN_CLAUDE ? "connecting" : "off";
+async function startCloudSync() {
+  if (!IN_CLAUDE) return;
+  let db = null;
+  try { db = await window.claude.use("db"); } catch { db = null; }
+  if (!db) { cloudState = "unavailable"; render(); return; }
+  cloudState = "waiting";
+  db.doc("sync/latest").onSnapshot((snap) => {
+    if (!snap.exists) { cloudState = "empty"; render(); return; }
+    const data = snap.data() || {};
+    cloudState = "ok";
+    const applied = (loadMine().meta || {}).lastSync;
+    if (data.generatedAt && data.generatedAt === applied) { render(); return; }
+    try {
+      const r = importMine(JSON.stringify(data));
+      reloadData();
+      toast(`已同步課輔系統：${r.tasks} 份作業、${r.notices} 則公告`);
+    } catch (e) {
+      toast("同步的資料格式有誤：" + e.message, 8000);
+    }
+  }, () => { cloudState = "unavailable"; render(); });
+}
+
+function cloudText() {
+  return {
+    connecting: "正在連線到雲端同步…",
+    waiting: "正在讀取雲端同步的資料…",
+    empty: "還沒有同步過。跟 Claude 說「幫我爬蟲」就會更新到這裡。",
+    unavailable: "目前讀不到雲端同步的資料（請確認已登入 Claude）。仍可使用上次同步的內容。",
+    ok: "已開啟自動同步：跟 Claude 說「幫我爬蟲」，這裡就會更新。"
+  }[cloudState] || "";
 }
 
 // ---------- 啟動 ----------
 (async function init() {
-  if ("serviceWorker" in navigator) {
+  if (!IN_CLAUDE && "serviceWorker" in navigator) {
     try { await navigator.serviceWorker.register("sw.js"); } catch (e) { console.warn("SW 註冊失敗", e); }
   }
   RAW = await loadData();
@@ -907,4 +1023,5 @@ function checkReminders() {
 
   checkReminders();
   setInterval(() => { render(); checkReminders(); }, 60 * 1000);
+  startCloudSync();
 })();

@@ -25,6 +25,7 @@
       <b>目前顯示的是示範資料</b>：課程、教室與作業都是虛構的，不是你的真實資料。
       <div><button class="btn small" id="btnBannerMine">改用我自己的資料</button></div>
     </div>
+    <div class="card hint" id="cloudBanner" hidden></div>
     <div class="card hint" id="syncBanner" hidden></div>
     <div class="card next-class" id="nextClass"></div>
     <div class="card" id="brief"></div>
@@ -152,6 +153,7 @@
     <h2>資料來源</h2>
     <div class="card">
       <p class="muted" id="dataSource"></p>
+      <p class="muted" id="cloudStatus" hidden></p>
       <div id="syncStatus"></div>
       <p class="muted">尚未串接課輔系統。串接後端後，會由後端定時取得最新資料；在那之前可以手動輸入。</p>
       <button class="btn secondary" id="btnMine">管理我的課程與作業</button>
@@ -172,6 +174,8 @@
     <div id="sheetBody"></div>
   </div>
 </div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
 <nav>
   <button data-view="home" class="active"><span>🏠</span>首頁</button>
