@@ -102,9 +102,11 @@ const step = (s) => { window.__pccuCrawl.step = s; };
       for (const b of found.blocks) {
         const cells = [...b.children].map((e, i) => {
           const v = one(e.innerText);
-          return v && head[i] && head[i] !== v && hasDate(v) ? `${head[i]}：${v}` : v;
+          if (v && head[i] && head[i] !== v && hasDate(v) && v.length < 40) return `${head[i]}：${v}`;
+          // 作業說明保留換行：寫成 U+2028，整份作業仍在同一列（pccu_parser 會換回換行）
+          return (e.innerText || "").split(/\r?\n/).map(clean).join("\u2028").replace(/^\u2028+|\u2028+$/g, "");
         }).filter(Boolean);
-        if (cells.length) rows.push(`${c.cc}\t${c.name}\t${cells.join(" | ").replace(/\t/g, " ")}`);
+        if (cells.length) rows.push(`${c.cc}\t${c.name}\t${cells.join(" | ").replace(/[\t\n]/g, " ")}`);
       }
       if (c.pendingHomework && !found.blocks.length) report.push(`${c.name}：首頁顯示有待繳作業，但作業頁是空的`);
     }

@@ -337,8 +337,9 @@ function taskItem(t, now, full) {
   const stageIdx = t.prog.stage || 0;
   let h = `<li class="task lv-${lv.k}" data-id="${esc(t.id)}">
     <div class="title"><button class="chk" data-act="done" aria-label="切換完成"${t.serverDone ? " disabled" : ""}>${t.done ? "☑" : "☐"}</button>
-      <span class="ttl">${esc(t.title)}${t.star ? " ⭐" : ""}</span>${dueTag(t, now)}</div>
-    <div class="sub">${esc(t.course)}・${fmtDate(t.due)}${t.dueConfidence === "range" ? "（推測）" : ""}・${t.done ? "已繳交" : relTime(t.due - now)}${t.done ? "" : `・優先度 ${lv.label}`}</div>
+      <span class="ttl" data-open="${esc(t.id)}" role="button" tabindex="0">${esc(t.title)}${t.star ? " ⭐" : ""}</span>${dueTag(t, now)}</div>
+    <div class="sub" data-open="${esc(t.id)}">${esc(t.course)}・${fmtDate(t.due)}${t.dueConfidence === "range" ? "（推測）" : ""}・${t.done ? "已繳交" : relTime(t.due - now)}${t.done ? "" : `・優先度 ${lv.label}`}</div>
+    ${t.detail ? `<div class="preview" data-open="${esc(t.id)}">📄 ${esc(t.detail.replace(/\s+/g, " ").slice(0, 50))}${t.detail.length > 50 ? "…" : ""}</div>` : ""}
     ${t.source === "crawler" ? `<div class="sub src">🤖 自動抓取${t.dueConfidence === "range" ? "・截止時間是從日期範圍推測的，請到課輔系統確認" : ""}${t.url ? `・<a href="${esc(t.url)}" target="_blank" rel="noopener">在課輔系統開啟</a>` : ""}</div>` : ""}`;
   if (full && !t.done) {
     h += `<div class="bar" title="${STAGES[stageIdx].label}"><i style="width:${STAGES[stageIdx].pct}%"></i></div>
@@ -378,6 +379,26 @@ function openNotice(id) {
       : '<p class="muted">這則公告還沒有內文。內文需要由電腦上的爬蟲抓取（見 README），或到課輔系統查看。</p>'}</div>
     ${n.links && n.links.length ? `<div class="label">附件與連結</div><ul class="links">${n.links.map((l) => `<li><a href="${esc(l.href)}" target="_blank" rel="noopener">📎 ${esc(l.text || l.href)}</a></li>`).join("")}</ul>` : ""}
     ${n.url ? `<a class="btn secondary small" href="${esc(n.url)}" target="_blank" rel="noopener">在課輔系統開啟</a>` : ""}`;
+  $("#sheet").hidden = false;
+  document.body.classList.add("sheet-open");
+  $("#sheetClose").focus();
+}
+// 作業詳細：課輔系統上的作業內容要求
+function openTask(id) {
+  const t = DATA.tasks.find((x) => x.id === id);
+  if (!t) return;
+  const now = Date.now();
+  $("#sheetBody").innerHTML = `<div class="label">${esc(t.course)}</div>
+    <h3 class="sheet-title">${esc(t.title)}</h3>
+    <div class="sub">截止 ${fmtDate(t.due)}${t.dueConfidence === "range" ? "（推測）" : ""}・${t.done ? "已繳交" : relTime(t.due - now)}</div>
+    <div class="label">作業要求</div>
+    <div class="notice-content">${t.detail ? linkify(t.detail)
+      : `<p class="muted">${t.source === "crawler" ? "課輔系統上這份作業沒有文字說明，可能放在附件裡。" : "這是你手動新增的作業，沒有說明。"}</p>`}</div>
+    ${t.prog && t.prog.note ? `<div class="note">📝 ${esc(t.prog.note)}</div>` : ""}
+    <div class="actions">
+      ${t.url ? `<a class="btn secondary small" href="${esc(t.url)}" target="_blank" rel="noopener">在課輔系統開啟（附件、繳交）</a>` : ""}
+      ${t.done ? "" : `<button class="btn secondary small" type="button" data-sheet-note="${esc(t.id)}">備註</button>`}
+    </div>`;
   $("#sheet").hidden = false;
   document.body.classList.add("sheet-open");
   $("#sheetClose").focus();
@@ -585,6 +606,7 @@ function showSchedPane(pane) {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !$("#sheet").hidden) closeSheet();
   if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.notice) { e.preventDefault(); openNotice(e.target.dataset.notice); }
+  else if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.open) { e.preventDefault(); openTask(e.target.dataset.open); }
 });
 $("#calPast").addEventListener("change", () => { state.calShowPast = $("#calPast").checked; saveState(); renderCalendar(Date.now()); });
 $("#btnHomeCal").addEventListener("click", () => { switchView("schedule"); showSchedPane("cal"); });
@@ -594,6 +616,10 @@ document.addEventListener("click", (e) => {
   const noticeEl = e.target.closest("[data-notice]");
   if (noticeEl && !e.target.closest("a")) { openNotice(noticeEl.dataset.notice); return; }
   if (e.target.closest("#sheetClose") || e.target.id === "sheet") { closeSheet(); return; }
+  const sheetNote = e.target.closest("[data-sheet-note]");
+  if (sheetNote) { const t = DATA.tasks.find((x) => x.id === sheetNote.dataset.sheetNote); if (t) openNoteEditor(t); return; }
+  const taskEl = e.target.closest("[data-open]");
+  if (taskEl && !e.target.closest("a, button")) { openTask(taskEl.dataset.open); return; }
 
   const schedBtn = e.target.closest("#schedSeg button");
   if (schedBtn) { showSchedPane(schedBtn.dataset.pane); return; }
@@ -731,7 +757,7 @@ function importMine(jsonText) {
     return { id: String(t.id || uid()), semester: t.semester || sem, course: String(t.course || ""), title: String(t.title), due, done: !!t.done,
       source: t.source === "crawler" || data.source === "crawler" ? "crawler" : "manual",
       dueConfidence: t.dueConfidence === "range" ? "range" : t.dueConfidence === "labelled" ? "labelled" : "",
-      url: safeUrl(t.url) };
+      url: safeUrl(t.url), detail: typeof t.detail === "string" ? t.detail.slice(0, 8000) : "" };
   });
   if (!schedule.length && !notices.length && !tasks.length && data.source !== "crawler") throw new Error("沒有可匯入的內容。");
 

@@ -70,6 +70,16 @@ ok(list(t).count("HW2") == 1 and t["HW2"]["due"] == "2026-11-03T12:00", "標題�
 ok("沒有日期的列" not in u and len(h["tasks"]) == 5, "沒有日期的列直接略過")
 ok(all(x["id"].startswith("hw-") for x in h["tasks"]) and run("homework", rows)["tasks"][0]["id"] == h["tasks"][0]["id"], "作業 id 固定（重複執行相同）")
 
+# ---- 作業內容說明：標題之後的欄位；爬蟲用 U+2028 表示欄位裡的換行
+detail_rows = os.path.join(tmp, "detail.txt")
+open(detail_rows, "w", encoding="utf-8").write("\n".join([
+    "c4\t課D\t未繳交 | 更新日期：2026-09-12 16:10:58 | 截止日期：2026/11/26 | Ex2 | 完成 6-4, 8\u20287-4, 11\u2028\u2028Hint: https://example.invalid/hint",
+    "c4\t課D\t已閱讀 | 更新日期：2026-09-29 09:29:46 | 截止日期：2026/10/02 | 第一次作業",
+]) + "\n")
+d = {x["title"]: x for x in run("homework", detail_rows)["tasks"]}
+ok(d["Ex2"]["detail"] == "完成 6-4, 8\n7-4, 11\n\nHint: https://example.invalid/hint", "作業說明保留換行、不含狀態與日期欄")
+ok(d["第一次作業"]["detail"] == "" and d["第一次作業"]["done"], "沒有說明的作業 detail 是空字串")
+
 # ---- <script> 內的範本字串不應被當成資料
 scripted = os.path.join(tmp, "scripted.html")
 open(scripted, "w", encoding="utf-8").write(open(fx("dashboard_sample.html"), encoding="utf-8").read().replace(

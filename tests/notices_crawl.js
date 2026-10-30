@@ -63,7 +63,7 @@ const ok = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fail++;
       { id: "nB", semester: "115-1", course: "範例通識", title: "沒有內文的公告", postedDate: "2026-10-19", read: true }
     ],
     tasks: [
-      { id: "hw-1", semester: "115-1", source: "crawler", course: "範例程式設計", title: "作業一", due: iso(now + 5 * H), dueConfidence: "labelled", done: false, url: "https://icas.pccu.edu.tw/cfp/?ccode=900001#homework" },
+      { id: "hw-1", semester: "115-1", source: "crawler", course: "範例程式設計", title: "作業一", due: iso(now + 5 * H), dueConfidence: "labelled", done: false, detail: "1. 寫出 operator<<\n2. 上傳 zip https://example.invalid/spec", url: "https://icas.pccu.edu.tw/cfp/?ccode=900001#homework" },
       { id: "hw-2", semester: "115-1", source: "crawler", course: "範例通識", title: "期末專題", due: iso(now + 100 * H), dueConfidence: "range", done: false }
     ],
     report: ["無法判斷截止時間（範例通識）：閱讀心得（2026/10/01）"]
@@ -108,6 +108,20 @@ const ok = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fail++;
   ok(get("#sheet").hidden === true, "點背景關閉內文頁");
   clickOn({ "[data-notice]": { dataset: { notice: "nB" } } }); await tick();
   ok(get("#sheetBody").innerHTML.includes("還沒有內文"), "沒有內文時說明原因");
+
+
+  // 作業：清單顯示要求預覽，點標題打開內容要求
+  ok(tasks().includes('data-open="hw-1"') && tasks().includes("📄 1. 寫出 operator&lt;&lt;"), "作業清單可點並顯示要求預覽");
+  clickOn({ "[data-open]": { dataset: { open: "hw-1" } } }); await tick();
+  const ts = get("#sheetBody").innerHTML;
+  ok(get("#sheet").hidden === false && ts.includes("作業要求") && ts.includes("operator&lt;&lt;<br>2. 上傳"), "點作業打開內容要求（保留換行、HTML 只當文字）");
+  ok(ts.includes('<a href="https://example.invalid/spec"') && ts.includes("在課輔系統開啟"), "要求中的網址變成連結，並可回課輔系統");
+  clickOn({ "[data-open]": { dataset: { open: "manual1" } } }); await tick();
+  ok(get("#sheetBody").innerHTML.includes("手動新增的作業，沒有說明"), "手動作業沒有說明時說明原因");
+  const chk = { dataset: { open: "hw-3" }, };
+  get("#sheet").hidden = true;
+  clickOn({ "[data-open]": chk, "a, button": {} }); await tick();
+  ok(get("#sheet").hidden === true, "點作業上的按鈕不會打開內容頁");
 
   console.log(fail ? "\n" + fail + " 項失敗" : "\n全部通過");
   process.exit(fail ? 1 : 0);

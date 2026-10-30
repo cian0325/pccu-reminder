@@ -122,7 +122,9 @@ JS_HOMEWORK_ROWS = r"""
       const cells = [...b.children].map((c, i) => {
         const v = clean(c.innerText || "");
         const h = mateHead[i];
-        return v && h && h !== v && hasDate(v) ? `${h}：${v}` : v;
+        if (v && h && h !== v && hasDate(v) && v.length < 40) return `${h}：${v}`;
+        // 作業說明保留換行：寫成 U+2028，整份作業仍在同一列（pccu_parser 會換回換行）
+        return (c.innerText || "").split(/\r?\n/).map(clean).join("\u2028").replace(/^\u2028+|\u2028+$/g, "");
       }).filter(Boolean);
       if (cells.length) rows.push(cells.join(" | "));
     }

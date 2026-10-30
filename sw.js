@@ -1,4 +1,4 @@
-const CACHE = "pccu-reminder-v8";
+const CACHE = "pccu-reminder-v9";
 const ASSETS = ["./", "index.html", "style.css", "app.js", "data.js", "calendar.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {

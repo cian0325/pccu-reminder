@@ -721,8 +721,40 @@ static bool containsAny(const string& s, const vector<string>& words) {
 
 struct HwTask {
     string id, ccode, course, title, due, confidence;
+    string detail;  // 作業內容說明（標題之後、不含日期的欄位；換行保留）
     bool done = false;
 };
+
+// 爬蟲把欄位裡的換行寫成 U+2028（一列作業必須在同一行），這裡換回 \n
+static string lineSepToNewline(const string& s) {
+    string out;
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (i + 2 < s.size() && (unsigned char)s[i] == 0xE2 && (unsigned char)s[i + 1] == 0x80 && (unsigned char)s[i + 2] == 0xA8) {
+            out += '\n';
+            i += 2;
+        } else out += s[i];
+    }
+    return out;
+}
+static string firstLine(const string& s) {
+    string t = lineSepToNewline(s);
+    size_t nl = t.find('\n');
+    return collapse(nl == string::npos ? t : t.substr(0, nl));
+}
+// 去掉每行前後空白與多餘空行
+static string tidyLines(const string& s) {
+    std::istringstream in(lineSepToNewline(s));
+    string line, out;
+    int blank = 0;
+    while (std::getline(in, line)) {
+        line = collapse(line);
+        if (line.empty()) { if (!out.empty()) ++blank; continue; }
+        if (!out.empty()) out += blank ? "\n\n" : "\n";
+        out += line;
+        blank = 0;
+    }
+    return out;
+}
 struct HwUnresolved { string ccode, course, text, reason; };
 
 static void parseHomeworkRows(const string& input, vector<HwTask>& tasks, vector<HwUnresolved>& unresolved) {
@@ -750,8 +782,10 @@ static void parseHomeworkRows(const string& input, vector<HwTask>& tasks, vector
 
         // 標題：第一個「不含日期、不是純標籤、不是純數字」的欄位
         string title;
-        for (const auto& seg0 : splitBy(text, " | ")) {
-            string seg = collapse(seg0);
+        auto segs = splitBy(text, " | ");
+        size_t titleAt = segs.size();
+        for (size_t si = 0; si < segs.size(); ++si) {
+            string seg = firstLine(segs[si]);
             if (seg.empty() || !findDates(seg).empty()) continue;
             if (std::all_of(seg.begin(), seg.end(), [](unsigned char c) { return std::isdigit(c) || c == ' ' || c == '.' || c == '/' || c == '%'; })) continue;
             bool isLabel = false;
@@ -759,7 +793,20 @@ static void parseHomeworkRows(const string& input, vector<HwTask>& tasks, vector
                 for (const auto& w : *list) if (seg == w || seg == "[" + w + "]") isLabel = true;
             if (isLabel) continue;
             title = seg;
+            titleAt = si;
             break;
+        }
+        string detail;
+        if (titleAt < segs.size()) {
+            string firstRest = lineSepToNewline(segs[titleAt]);  // 標題欄本身有多行時，第二行起也算說明
+            size_t nl = firstRest.find('\n');
+            if (nl != string::npos) detail = tidyLines(firstRest.substr(nl + 1));
+            for (size_t si = titleAt + 1; si < segs.size(); ++si) {
+                string seg = tidyLines(segs[si]);
+                if (seg.empty() || (!findDates(seg).empty() && seg.size() < 40)) continue;  // 純日期欄（更新日期等）不算說明
+                detail += (detail.empty() ? "" : "\n\n") + seg;
+            }
+            if (detail.size() > 8000) detail = detail.substr(0, 8000);
         }
         if (title.empty()) {
             // 整列只有一個欄位（例如「第3週練習 - 2026/10/20」）：取第一個日期前面的文字
@@ -801,7 +848,7 @@ static void parseHomeworkRows(const string& input, vector<HwTask>& tasks, vector
         }
 
         HwTask t;
-        t.ccode = ccode; t.course = course; t.title = title; t.due = fmtDue(*due); t.confidence = confidence;
+        t.ccode = ccode; t.course = course; t.title = title; t.due = fmtDue(*due); t.confidence = confidence; t.detail = detail;
         t.done = containsAny(text, doneWords) && !containsAny(text, notDoneWords);
         t.id = "hw-" + ccode + "-" + fnv1a(title);
         if (seen.count(t.id)) continue;  // 同一份作業出現在兩個區塊（例如清單 + 詳細）只取一次
@@ -817,7 +864,7 @@ static string homeworkJson(const vector<HwTask>& tasks, const vector<HwUnresolve
         const auto& t = tasks[i];
         o << (i ? "," : "") << "{\"id\":" << jstr(t.id) << ",\"ccode\":" << jstr(t.ccode) << ",\"course\":" << jstr(t.course)
           << ",\"title\":" << jstr(t.title) << ",\"due\":" << jstr(t.due) << ",\"dueConfidence\":" << jstr(t.confidence)
-          << ",\"done\":" << (t.done ? "true" : "false") << "}";
+          << ",\"done\":" << (t.done ? "true" : "false") << ",\"detail\":" << jstr(t.detail) << "}";
     }
     o << "],\"unresolved\":[";
     for (size_t i = 0; i < un.size(); ++i)

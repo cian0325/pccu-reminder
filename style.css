@@ -101,6 +101,9 @@ h2 .link{float:right;background:none;border:0;color:var(--accent);font-size:13px
 .muted-inline{font-size:12px;color:var(--muted);font-weight:400}
 
 .notice{cursor:pointer}
+.task [data-open]{cursor:pointer}
+.task .preview{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5;overflow-wrap:anywhere}
+.sheet .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .notice .preview{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5}
 .sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
 .sheet[hidden]{display:none}
