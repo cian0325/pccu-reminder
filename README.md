@@ -66,7 +66,7 @@ GitHub Pages 直接發佈根目錄，所以網站檔案（`index.html`、`app.js
 
 | | Claude 網頁版（Artifact） | App 版（GitHub Pages） |
 |---|---|---|
-| 怎麼更新作業與公告 | 跟 Claude 說「幫我爬蟲」，打開頁面就是最新 | 在電腦執行爬蟲，把 my-data.json 匯入 |
+| 怎麼更新作業與公告 | 跟 Claude 說「幫我爬蟲」，打開頁面就是最新 | Claude 爬蟲後也上傳 `sync/latest.json`，App 打開或回到前景時自動匯入（也可手動匯入 my-data.json） |
 | 手機系統通知 | 不支援（提醒顯示在畫面上） | 支援（App 開著時） |
 | 加入主畫面、離線 | 不支援 | 支援 |
 | 誰看得到資料 | 只有你（需登入 Claude；資料庫規則只允許擁有者讀寫） | 只在你的手機上 |

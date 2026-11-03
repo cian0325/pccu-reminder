@@ -1,4 +1,4 @@
-const CACHE = "pccu-reminder-v9";
+const CACHE = "pccu-reminder-v10";
 const ASSETS = ["./", "index.html", "style.css", "app.js", "data.js", "calendar.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -15,7 +15,7 @@ self.addEventListener("activate", (e) => {
 // 離線優先：靜態檔先讀快取，API 一律走網路
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  if (e.request.method !== "GET" || url.pathname.startsWith("/api/")) return;
+  if (e.request.method !== "GET" || url.pathname.startsWith("/api/") || url.pathname.endsWith("/sync/latest.json")) return;
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request)));
 });
 

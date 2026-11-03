@@ -1016,6 +1016,23 @@ async function startCloudSync() {
   }, () => { cloudState = "unavailable"; render(); });
 }
 
+// ---------- GitHub 同步（主畫面 App 版） ----------
+// Claude 爬蟲後也把同步資料上傳到這個 repo 的 sync/latest.json；App 打開或回到前景時讀取，有新資料就自動匯入。
+async function startRepoSync() {
+  if (IN_CLAUDE) return;
+  try {
+    const r = await fetch(`sync/latest.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) return;
+    const data = await r.json();
+    const applied = (loadMine().meta || {}).lastSync;
+    if (!data.generatedAt || data.generatedAt === applied) return;
+    const res = importMine(JSON.stringify(data));
+    await reloadData();
+    toast(`已同步課輔系統：${res.tasks} 份作業、${res.notices} 則公告`);
+  } catch (e) { /* 離線或檔案不存在：沿用上次的資料 */ }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") startRepoSync(); });
+
 function cloudText() {
   return {
     connecting: "正在連線到雲端同步…",
@@ -1050,4 +1067,5 @@ function cloudText() {
   checkReminders();
   setInterval(() => { render(); checkReminders(); }, 60 * 1000);
   startCloudSync();
+  startRepoSync();
 })();
