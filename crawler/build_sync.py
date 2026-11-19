@@ -68,6 +68,8 @@ def main() -> None:
 
     report = list(crawl.get("report", []))
     for u in hw.get("unresolved", []):
+        if any(k in u["text"] for k in ("已繳交", "已閱讀")):
+            continue  # 已經交了的作業沒有截止日期也無妨，不列進需要注意的訊息
         parts = u["text"].split(" | ")
         title = next((p for p in parts if p and not any(k in p for k in ("日期：", "未繳交", "已閱讀", "已繳交"))), u["text"])
         report.append(f"{u['reason']}（{u['course']}）：{title}")
