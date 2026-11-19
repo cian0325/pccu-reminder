@@ -85,6 +85,21 @@ Claude ─▶ 你電腦上 Claude 桌面 App 的瀏覽器窗格（你自己登�
 ```
 
 需要：電腦開著、Claude 桌面 App 開著，且瀏覽器窗格裡的課輔系統還在登入狀態（過期時 Claude 會請你重新登入）。
+
+### 每天自動同步（Windows）
+
+登入一兩天就會過期，所以每日自動同步改成「登入交給自己電腦上的程式」：
+
+```
+20:00  Windows 工作排程器 ─▶ windows/ 裡的 auto_crawl.py（Playwright 無痕瀏覽器）
+         ├ 從 Windows 認證管理員讀學號密碼，自己登入（Claude 看不到也不輸入密碼）
+         └ 執行同一支 crawl_in_browser.js ─▶ data/crawl.json、data/status.json
+20:30  Claude 每日排程 ─▶ 讀 data/ ─▶ C++ pccu_parser 判斷截止時間 ─▶ 更新 Artifact 資料庫 ─▶ 推播摘要
+```
+
+安裝：把 `windows/` 的檔案和 `crawler/auto_crawl.py`、`crawler/crawl_in_browser.js` 放在同一個資料夾，雙擊 `setup.bat`
+（安裝 Playwright、keyring，輸入一次學號密碼並試跑，再建立每天 20:00 的排程；電腦當時沒開會在開機後補跑）。
+改密碼就重跑 `setup.bat`；停用用 `uninstall.bat`（刪排程與存好的密碼）。測試：`python3 tests/auto_crawl_e2e.py`（模擬網站、虛構帳號）。
 你在手機上標的完成、重要、進度、備註存在那支手機，不會被同步覆蓋。
 
 ## 系統架構
@@ -229,7 +244,7 @@ g++ -std=c++17 -Wall -Wextra -O2 pccu_parser.cpp -o pccu_parser
 
 ## 安全與使用規範
 
-- 課輔帳密只放在後端環境變數或加密設定檔，**不要**放進前端或 git
+- 課輔帳密只放在 Windows 認證管理員（`auto_crawl.py --setup`），**不要**放進檔案、前端或 git；Claude 不會輸入或讀取密碼
 - 抓取頻率保持低（例如每 15–30 分鐘一次），避免造成學校系統負擔
 - 使用前請確認學校對自動化存取的規定；書審展示建議使用示範資料或自己的帳號
 - 這個 App 只供本人使用，不收集他人資料

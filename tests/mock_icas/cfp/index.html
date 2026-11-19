@@ -5,11 +5,13 @@
        （頁面上另有一個看得見但永遠是空的 #dialog）
      * 作業頁是 div 版面：.MateTitleBlock 是欄名，每份作業一個 .MateBlock；截止日期只有年月日
      * 作業狀態：未繳交、已閱讀（老師已檢視你交的作業）
-     * 沒有作業的課程顯示「暫無任何內容」 -->
+     * 沒有作業的課程顯示「暫無任何內容」
+     * 登入：點「登入」(onclick="CallLogin(true)") 跳出 #LoginWindow，欄位 #LoginID、#LoginPass，按鈕 #SubmitBtn；
+       這裡只接受虛構的測試帳號 test-student / test-only-pw -->
 <html><head><meta charset="utf-8"><title>課業輔導系統（模擬）</title></head>
 <body>
 <div id="infobar"><span>重要訊息</span> <span>!! 2026/10/10 系統維護 !!</span></div>
-<ul id="navlist"><li id="logintab"><a>登入</a></li><li id="logoutab" style="display:none"><a>登出</a></li></ul>
+<ul id="navlist"><li id="logintab"><a title="登入" onclick="CallLogin(true)">登入</a></li><li id="logoutab" style="display:none"><a>登出</a></li></ul>
 
 <div id="login" hidden>
   <p>請登入</p>
@@ -112,6 +114,25 @@ function route() {
   }
 }
 
+// 與實際頁面相同的登入視窗（結構仿照 2026/11 觀察；帳密是虛構的測試值）
+let loginWin = null;
+function CallLogin() {
+  if (loginWin) { loginWin.remove(); loginWin = null; return; }
+  loginWin = document.createElement("div");
+  loginWin.id = "LoginWindow";
+  loginWin.innerHTML = `<div id="LoginInner"><div class="LoginRow" id="loginMsg">請輸入帳號密碼</div>
+    <div class="LoginRow"><span>帳號</span><input id="LoginID" class="LoginInput"></div>
+    <div class="LoginRow"><span>密碼</span><input id="LoginPass" class="LoginInput" type="password"></div>
+    <div class="LoginRow"><input id="SubmitBtn" type="button" value="登入"><input id="CloseBtn" type="button" value="關閉"></div></div>`;
+  document.body.appendChild(loginWin);
+  loginWin.querySelector("#SubmitBtn").addEventListener("click", () => {
+    setTimeout(() => {
+      if (document.querySelector("#LoginID").value === "test-student" && document.querySelector("#LoginPass").value === "test-only-pw") {
+        document.cookie = "mockauth=1; path=/"; location.reload();
+      } else document.querySelector("#loginMsg").textContent = "登入失敗";
+    }, 300);
+  });
+}
 document.querySelector("#loginBtn").addEventListener("click", () => { document.cookie = "mockauth=1; path=/"; location.reload(); });
 document.querySelector("#CListYYM").addEventListener("change", (e) => { document.cookie = "yym=" + e.target.value + "; path=/"; location.reload(); });
 document.querySelector(".AnnoBtn").addEventListener("click", () => { document.querySelector("#Popup").style.display = "none"; });
