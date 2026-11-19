@@ -125,6 +125,9 @@ def login(page, base: str, uid: str, pw: str, log: Log) -> str:
     page.wait_for_selector("#LoginID", state="visible", timeout=15000)
     page.fill("#LoginID", uid)
     page.fill("#LoginPass", pw)
+    got = page.evaluate("() => [document.querySelector('#LoginID').value.length, document.querySelector('#LoginPass').value.length]")
+    if got != [len(uid), len(pw)]:   # 欄位有長度限制等情況：只記錄長度，不記錄內容
+        log(f"注意：登入欄位內容長度和輸入不同（帳號 {got[0]}/{len(uid)}、密碼 {got[1]}/{len(pw)}）")
     page.click("#SubmitBtn")
     deadline = time.time() + 30
     while time.time() < deadline:
@@ -212,19 +215,45 @@ def run(args: argparse.Namespace, creds: tuple[str, str], log: Log) -> int:
     return EXIT_OK
 
 
+def check_password(pw: str) -> str:
+    """找出常見的輸入問題（不顯示密碼本身）。"""
+    if not pw:
+        return "密碼是空的。"
+    if any(ord(c) < 32 or ord(c) == 127 for c in pw):
+        return "密碼裡有看不見的控制字元，通常是按了 Ctrl+V。請直接打字，或用滑鼠右鍵貼上。"
+    if any(ord(c) > 126 for c in pw):
+        return "密碼裡有中文或全形字元，可能是輸入法沒切到英文。請切成英文再輸入。"
+    if pw != pw.strip():
+        return "密碼前後有空白，請確認是否多打了空白。"
+    return ""
+
+
 def setup(args: argparse.Namespace) -> int:
     print("課輔提醒自動爬蟲設定\n")
     print("學號與密碼會存在 Windows 認證管理員（只有你的 Windows 帳號能讀），不會寫進任何檔案。")
+    print("提醒：請先把輸入法切到英文；這個視窗裡 Ctrl+V 不能貼上（貼上請按滑鼠右鍵），建議直接打字。\n")
     uid = input("課輔系統帳號（學號）：").strip()
-    pw = getpass.getpass("密碼（輸入時畫面不會顯示）：")
-    if not uid or not pw:
-        print("帳號或密碼是空的，已取消。")
+    while True:
+        pw = getpass.getpass("密碼（輸入時畫面不會顯示）：").rstrip("\r\n")
+        problem = check_password(pw)
+        if problem:
+            print(problem + "\n")
+            continue
+        if getpass.getpass("再輸入一次密碼確認：").rstrip("\r\n") != pw:
+            print("兩次輸入的密碼不一樣，請重新輸入。\n")
+            continue
+        break
+    if not uid:
+        print("帳號是空的，已取消。")
         return EXIT_NO_CREDS
+    print(f"\n帳號：{uid}，密碼長度：{len(pw)} 個字元（可以對照你的密碼長度）")
     save_credentials(uid, pw)
-    print("\n已儲存。現在試跑一次（大約 1～2 分鐘）…\n")
+    print("已儲存。現在試跑一次（大約 1～2 分鐘）。會打開一個瀏覽器視窗讓你看登入過程，請不要操作它。\n")
+    args.headed = True
     code = run(args, (uid, pw), Log(Path(args.data_dir)))
     if code == EXIT_LOGIN_FAILED:
-        print("\n登入失敗，請確認帳號密碼後重新執行 setup.bat。")
+        print("\n登入失敗。請先到 https://icas.pccu.edu.tw/cfp/ 用同一組帳密手動登入看看；"
+              "\n能登入的話，重新執行 setup.bat 時請直接打字輸入（輸入法切英文）。")
     elif code == EXIT_OK:
         print(f"\n成功！結果在 {Path(args.data_dir) / 'crawl.json'}")
     return code
