@@ -1,6 +1,6 @@
 {
  "source": "crawler",
- "generatedAt": "2026-11-03T14:13:07+00:00",
+ "generatedAt": "2026-11-23T20:42:21+08:00",
  "semester": "115-1",
  "schedule": [
   {
@@ -175,69 +175,69 @@
  ],
  "notices": [
   {
-   "id": "n406266-2026-11-03-ef931404",
-   "semester": "115-1",
-   "course": "外文︰英文閱讀與聽講(二)",
-   "ccode": "406266",
-   "title": "English Short Speech Contest / 英語個人短講競賽",
-   "postedDate": "2026-11-03",
-   "read": false,
-   "content": "Dear All,\n\nI'm passing on information regarding a speech contest. If you are interested, please see the attachments.",
-   "links": [],
-   "teacher": "林孟良",
-   "url": "https://icas.pccu.edu.tw/cfp/?ccode=406266#mainpage"
-  },
-  {
-   "id": "n405726-2026-11-02-6635bd3a",
-   "semester": "115-1",
-   "course": "數位系統導論",
-   "ccode": "405726",
-   "title": "數位系統導論－期中考試時間及應試規定提醒",
-   "postedDate": "2026-11-02",
-   "read": false,
-   "content": "各位同學好：\n\n提醒大家，本週即將進行「數位系統導論」期中考試，請務必確認考試時間與地點，並準時到場應試。\n\n【考試時間與地點】\n2B：11/04（三）09:10–12:00\n2A：11/05（四）13:10–16:00\n考試地點：大義館 7 樓 721 教室\n\n【考試範圍】\n第 4 章：交換代數\n第 5 章：邏輯閘層次電路設計\n\n【應試注意事項】\n\n依據本校《學生考試規則》，為維護考試公平性，請同學遵守以下規定：\n\n1. 請準時到場應試。2B 最晚須於 09:40 前、2A 最晚須於 13:40 前進場，逾時不得進場考試。\n2. 2B 須於 09:50 後、2A 須於 13:50 後，才可交卷離場，不得提前交卷。\n3. 請提前抵達教室，以免影響考試權益。\n\n請大家務必配合上述規定，並做好考前準備。\n\n預祝大家考試順利！",
-   "links": [],
-   "teacher": "林祐全",
-   "url": "https://icas.pccu.edu.tw/cfp/?ccode=405726#mainpage"
-  },
-  {
-   "id": "n406466-2026-11-03-a7ab4f89",
+   "id": "n406466-2026-11-23-1e3180a2",
    "semester": "115-1",
    "course": "人文通識︰影片中的歷史—近代以來的臺灣、中國與日本",
    "ccode": "406466",
-   "title": "期中考注意事項",
-   "postedDate": "2026-11-03",
+   "title": "課程地點更動",
+   "postedDate": "2026-11-23",
    "read": true,
-   "content": "上半學期觀賞影片連結如下：\n1.日本幕府消亡史：https://www.youtube.com/watch?v=Sdo6FXHhcIk&t=135s\n\n2.日本崛起的歷史黑幕：https://www.youtube.com/watch?v=wOZPOtXBxaY&t=2346s\n\n3.一口氣看完甲午戰爭：https://www.youtube.com/watch?v=7nGP8VW_aFo&t=578s\n\n非正當理由並出具證明，不予補考",
+   "content": "本週11/24課程，請前往恩104參加校本課程期中交流分享會，會點名，請出席。",
    "links": [],
    "teacher": "劉傳暘",
    "url": "https://icas.pccu.edu.tw/cfp/?ccode=406466#mainpage"
   },
   {
-   "id": "n405657-2026-10-31-e5639bc8",
+   "id": "n406266-2026-11-17-ce29ea40",
    "semester": "115-1",
-   "course": "機率與統計",
-   "ccode": "405657",
-   "title": "11/5(四)期中考",
-   "postedDate": "2026-10-31",
-   "read": true,
-   "content": "考試開始時間：10:10\n考試範圍：第1章~第5章(5-3)\n\nPS. 請準時於10:10就座，若晚於10:30之後進入教室，將會限制作答/無法作答。",
+   "course": "外文︰英文閱讀與聽講(二)",
+   "ccode": "406266",
+   "title": "Vocabulary Quiz - Unit 5 12/2",
+   "postedDate": "2026-11-17",
+   "read": false,
+   "content": "Dear All,\n\nThere will be a vocabulary quiz on December 2nd. You will need to know 1 to 28 in the vocabulary list.",
    "links": [],
-   "teacher": "劉仲鑫",
-   "url": "https://icas.pccu.edu.tw/cfp/?ccode=405657#mainpage"
+   "teacher": "林孟良",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=406266#mainpage"
   },
   {
-   "id": "n405726-2026-10-30-08a2cdf0",
+   "id": "n406266-2026-11-17-8374c764",
    "semester": "115-1",
-   "course": "數位系統導論",
-   "ccode": "405726",
-   "title": "數位系統導論－期中考試時間、地點及範圍公告",
-   "postedDate": "2026-10-30",
-   "read": true,
-   "content": "各位同學好：\n\n下週為「數位系統導論」期中考試，請同學留意各班考試時間與地點，並準時到指定教室應試。\n\n【考試地點】\n大義館 7 樓 721 教室\n\n【考試時間】\n資工系2B：11/04（三）09:10–12:00\n資工系2A：11/05（四）13:10–16:00\n\n【考試範圍】\n第 4 章：交換代數\n第 5 章：邏輯閘層次電路設計\n\n請同學務必確認自己的考試時間與教室。\n\n預祝大家期中考順利！",
+   "course": "外文︰英文閱讀與聽講(二)",
+   "ccode": "406266",
+   "title": "Extra Credit - 11/11",
+   "postedDate": "2026-11-17",
+   "read": false,
+   "content": "Dear All,\n\nQuite a few of you turned in extra credit on November 11th on your own accord. I have recorded that you have done so, and will apply it to your final grade at the end of the semester. What you have turned in will be passed back to you on Wednesday.\n\nThose of you who needed to turn in extra credit will also have their work returned. This will show the change in their grade.",
    "links": [],
-   "teacher": "林祐全",
-   "url": "https://icas.pccu.edu.tw/cfp/?ccode=405726#mainpage"
+   "teacher": "林孟良",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=406266#mainpage"
+  },
+  {
+   "id": "n405193-2026-11-14-ef777184",
+   "semester": "115-1",
+   "course": "資料結構",
+   "ccode": "405193",
+   "title": "11/16線上測驗",
+   "postedDate": "2026-11-14",
+   "read": true,
+   "content": "11/16採線上方式，請同學於15:10登入Zuvio簽到，並完成隨堂測驗。",
+   "links": [],
+   "teacher": "林世崧",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=405193#mainpage"
+  },
+  {
+   "id": "n406266-2026-11-10-ec2da5fe",
+   "semester": "115-1",
+   "course": "外文︰英文閱讀與聽講(二)",
+   "ccode": "406266",
+   "title": "LiveABC 新版檢定",
+   "postedDate": "2026-11-10",
+   "read": true,
+   "content": "Dear All,\n\nThe final two weeks of the semester are for self-study. This means taking a practice TOEIC exam. The platform for this exam is LiveABC 新版檢定. Attached are two screenshots showing you how to access this platform. Once I have set up the practice exam, I will let you know. Please remember that this is a part of your grade.\n\nIf you wish to earn some extra credit, I am willing to set up another exam or two, and depending how you test you can earn some extra points.  However, you'll have to make a request before I do so.",
+   "links": [],
+   "teacher": "林孟良",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=406266#mainpage"
   }
  ],
  "tasks": [
@@ -255,11 +255,24 @@
    "url": "https://icas.pccu.edu.tw/cfp/?ccode=405193#homework"
   },
   {
+   "id": "hw-405657-9b8cac6d",
+   "ccode": "405657",
+   "course": "機率與統計",
+   "title": "W10授課影片，請觀賞並截圖上傳",
+   "due": "2026-11-21T23:59",
+   "dueConfidence": "labelled",
+   "done": true,
+   "detail": "W10(11/15~11/21)授課影片已放在Teams檔案區，請觀賞並截圖1張上傳作為出席佐證( 截圖內須顯示自己姓名 )",
+   "semester": "115-1",
+   "source": "crawler",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=405657#homework"
+  },
+  {
    "id": "hw-405657-19abefae",
    "ccode": "405657",
    "course": "機率與統計",
    "title": "Ex2",
-   "due": "2026-11-26T23:59",
+   "due": "2026-12-03T23:59",
    "dueConfidence": "labelled",
    "done": false,
    "detail": "完成 挑戰試試看6-4, 87-4, 8, 11完成後請將所有完成檔案壓縮成單一檔再上傳繳交期限：教完CH5之後一周Hint: 可參考林素菁老師的教學網頁https://sites.google.com/site/sjlin0618/Statistics/stat_bookv3?authuser=0",
@@ -285,9 +298,9 @@
    "ccode": "405657",
    "course": "機率與統計",
    "title": "EX1",
-   "due": "2026-11-05T23:59",
+   "due": "2026-11-12T23:59",
    "dueConfidence": "labelled",
-   "done": false,
+   "done": true,
    "detail": "完成 挑戰試試看3-5, 10, 15, 175-7, 10 , 13完成後請將所有完成檔案壓縮成單一檔再上傳繳交期限：教完CH5之後一周Hint: 可參考林素菁老師的教學網頁https://sites.google.com/site/sjlin0618/Statistics/stat_bookv3?authuser=0",
    "semester": "115-1",
    "source": "crawler",
@@ -307,39 +320,13 @@
    "url": "https://icas.pccu.edu.tw/cfp/?ccode=405875#homework"
   },
   {
-   "id": "hw-407957-e4e36682",
-   "ccode": "407957",
-   "course": "跨域社會︰飲食、食安與健康",
-   "title": "自主學習一(專題製作)",
-   "due": "2026-11-20T23:59",
-   "dueConfidence": "labelled",
-   "done": false,
-   "detail": "如附件 聽講學習單",
-   "semester": "115-1",
-   "source": "crawler",
-   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
-  },
-  {
-   "id": "hw-407957-5385fa80",
-   "ccode": "407957",
-   "course": "跨域社會︰飲食、食安與健康",
-   "title": "個人養生報告",
-   "due": "2026-11-06T23:59",
-   "dueConfidence": "labelled",
-   "done": false,
-   "detail": "word檔內容請提出：一、三餐養生觀點檢視二、三餐養生計畫三、計畫如何評估是否適當",
-   "semester": "115-1",
-   "source": "crawler",
-   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
-  },
-  {
    "id": "hw-407959-4169d3a2",
    "ccode": "407959",
    "course": "跨域社會︰生活美學",
    "title": "一、【生活美學理念報告】",
    "due": "2026-11-06T23:59",
    "dueConfidence": "labelled",
-   "done": false,
+   "done": true,
    "detail": "1. 請同學分享個人對「生活美學」的理念、觀點與看法。2. 報告內容包括：對「生活」、「美」的看法、對「美好、美感生活」的看法等觀點。3. 報告呈現方式可以「金句分享」的方式呈現。4. 報告請以《簡報檔》(Power Point) 方式呈現。★《報告檔案》請於《11月06日 24：00前》上傳至「課業輔導系統」作業區。★ 報告檔名請統一為：1151_生活美學理念報告_系級姓名。★ 請同學《提早或於報告規定時間內》繳交報告，本課程不收逾期報告，祝福同學。",
    "semester": "115-1",
    "source": "crawler",
@@ -370,11 +357,37 @@
    "semester": "115-1",
    "source": "crawler",
    "url": "https://icas.pccu.edu.tw/cfp/?ccode=407959#homework"
+  },
+  {
+   "ccode": "407957",
+   "course": "跨域社會︰飲食、食安與健康",
+   "detail": "網址如附件",
+   "done": false,
+   "due": "2026-11-13T23:59",
+   "dueConfidence": "labelled",
+   "id": "hw-407957-5da94d56",
+   "semester": "115-1",
+   "source": "crawler",
+   "title": "11月13日聽講回饋表填寫",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
+  },
+  {
+   "ccode": "407957",
+   "course": "跨域社會︰飲食、食安與健康",
+   "detail": "word檔內容請提出：一、三餐養生觀點檢視二、三餐養生計畫三、計畫如何評估是否適當",
+   "done": true,
+   "due": "2026-11-06T23:59",
+   "dueConfidence": "labelled",
+   "id": "hw-407957-5385fa80",
+   "semester": "115-1",
+   "source": "crawler",
+   "title": "個人養生報告",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
   }
  ],
  "report": [
+  "跨域社會︰飲食、食安與健康：作業頁沒有在時間內載入",
   "作業頁沒有列出截止日期（只有發布/更新日期）（數位系統實驗）：9/17 第一週-實習課作業繳交連結",
-  "作業頁沒有列出截止日期（只有發布/更新日期）（電子商務安全）：Midterm",
   "作業頁沒有列出截止日期（只有發布/更新日期）（跨域社會︰飲食、食安與健康）：自主學習二(專題製作)"
  ]
 }
