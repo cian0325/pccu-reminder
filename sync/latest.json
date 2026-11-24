@@ -1,6 +1,6 @@
 {
  "source": "crawler",
- "generatedAt": "2026-11-23T20:42:21+08:00",
+ "generatedAt": "2026-11-24T20:41:51+08:00",
  "semester": "115-1",
  "schedule": [
   {
@@ -320,6 +320,32 @@
    "url": "https://icas.pccu.edu.tw/cfp/?ccode=405875#homework"
   },
   {
+   "id": "hw-407957-5da94d56",
+   "ccode": "407957",
+   "course": "跨域社會︰飲食、食安與健康",
+   "title": "11月13日聽講回饋表填寫",
+   "due": "2026-11-13T23:59",
+   "dueConfidence": "labelled",
+   "done": false,
+   "detail": "網址如附件",
+   "semester": "115-1",
+   "source": "crawler",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
+  },
+  {
+   "id": "hw-407957-5385fa80",
+   "ccode": "407957",
+   "course": "跨域社會︰飲食、食安與健康",
+   "title": "個人養生報告",
+   "due": "2026-11-06T23:59",
+   "dueConfidence": "labelled",
+   "done": true,
+   "detail": "word檔內容請提出：一、三餐養生觀點檢視二、三餐養生計畫三、計畫如何評估是否適當",
+   "semester": "115-1",
+   "source": "crawler",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
+  },
+  {
    "id": "hw-407959-4169d3a2",
    "ccode": "407959",
    "course": "跨域社會︰生活美學",
@@ -357,36 +383,9 @@
    "semester": "115-1",
    "source": "crawler",
    "url": "https://icas.pccu.edu.tw/cfp/?ccode=407959#homework"
-  },
-  {
-   "ccode": "407957",
-   "course": "跨域社會︰飲食、食安與健康",
-   "detail": "網址如附件",
-   "done": false,
-   "due": "2026-11-13T23:59",
-   "dueConfidence": "labelled",
-   "id": "hw-407957-5da94d56",
-   "semester": "115-1",
-   "source": "crawler",
-   "title": "11月13日聽講回饋表填寫",
-   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
-  },
-  {
-   "ccode": "407957",
-   "course": "跨域社會︰飲食、食安與健康",
-   "detail": "word檔內容請提出：一、三餐養生觀點檢視二、三餐養生計畫三、計畫如何評估是否適當",
-   "done": true,
-   "due": "2026-11-06T23:59",
-   "dueConfidence": "labelled",
-   "id": "hw-407957-5385fa80",
-   "semester": "115-1",
-   "source": "crawler",
-   "title": "個人養生報告",
-   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
   }
  ],
  "report": [
-  "跨域社會︰飲食、食安與健康：作業頁沒有在時間內載入",
   "作業頁沒有列出截止日期（只有發布/更新日期）（數位系統實驗）：9/17 第一週-實習課作業繳交連結",
   "作業頁沒有列出截止日期（只有發布/更新日期）（跨域社會︰飲食、食安與健康）：自主學習二(專題製作)"
  ]
