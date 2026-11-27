@@ -1,6 +1,6 @@
 {
  "source": "crawler",
- "generatedAt": "2026-11-27T11:10:10+08:00",
+ "generatedAt": "2026-11-28T00:58:27+08:00",
  "semester": "115-1",
  "schedule": [
   {
@@ -272,7 +272,7 @@
    "ccode": "405657",
    "course": "機率與統計",
    "title": "Ex2",
-   "due": "2026-12-03T23:59",
+   "due": "2026-12-17T23:59",
    "dueConfidence": "labelled",
    "done": false,
    "detail": "完成 挑戰試試看6-4, 87-4, 8, 11完成後請將所有完成檔案壓縮成單一檔再上傳繳交期限：教完CH5之後一周Hint: 可參考林素菁老師的教學網頁https://sites.google.com/site/sjlin0618/Statistics/stat_bookv3?authuser=0",
@@ -318,6 +318,32 @@
    "semester": "115-1",
    "source": "crawler",
    "url": "https://icas.pccu.edu.tw/cfp/?ccode=405875#homework"
+  },
+  {
+   "id": "hw-407957-d47c1deb",
+   "ccode": "407957",
+   "course": "跨域社會︰飲食、食安與健康",
+   "title": "聽講學習單 加分",
+   "due": "2026-12-03T23:59",
+   "dueConfidence": "labelled",
+   "done": false,
+   "detail": "填寫表如附件",
+   "semester": "115-1",
+   "source": "crawler",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
+  },
+  {
+   "id": "hw-407957-8102939c",
+   "ccode": "407957",
+   "course": "跨域社會︰飲食、食安與健康",
+   "title": "自主學習一(11月13日聽講學習單填寫)",
+   "due": "2026-11-26T23:59",
+   "dueConfidence": "labelled",
+   "done": true,
+   "detail": "填寫表如附件",
+   "semester": "115-1",
+   "source": "crawler",
+   "url": "https://icas.pccu.edu.tw/cfp/?ccode=407957#homework"
   },
   {
    "id": "hw-407957-5da94d56",
